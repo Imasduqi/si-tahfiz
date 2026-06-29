@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Input focus state ── */
+.focus-input-ortu:focus {
+  outline: none;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
+}
+
+/* ── Button hover/active ── */
+.btn-ortu-primary:hover:not(:disabled) {
+  background-color: #059669 !important;
+}
+
+.btn-ortu-primary:active:not(:disabled) {
+  background-color: #047857 !important;
+}
+
+/* ── Link hover ── */
+.link-ortu-emerald:hover {
+  color: #059669 !important;
+}

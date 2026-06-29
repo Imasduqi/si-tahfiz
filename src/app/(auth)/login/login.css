@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Kolom layout ── */
+.login-news-col {
+  display: flex !important;
+  flex: 0 0 75%;
+  max-width: 75%;
+}
+
+.login-form-col {
+  flex: 0 0 25%;
+  max-width: 25%;
+}
+
+@media (max-width: 768px) {
+  .login-news-col {
+    display: none !important;
+  }
+
+  .login-form-col {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ── Input focus state ── */
+.focus-input:focus {
+  outline: none;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
+}
+
+/* ── Button hover/active ── */
+.btn-primary:hover:not(:disabled) {
+  background-color: #059669 !important;
+}
+
+.btn-primary:active:not(:disabled) {
+  background-color: #047857 !important;
+}
+
+/* ── Link hover ── */
+.link-emerald:hover {
+  color: #059669 !important;
+}
