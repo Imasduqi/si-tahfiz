@@ -6,7 +6,6 @@ import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { EmptyState } from '@/components/ui/empty-state'
-import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 import { toast } from 'sonner'
 import { Send, ArrowLeft, MessageSquare, User, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -123,6 +122,7 @@ export default function PengampuPesanPage() {
         if (santrisError) throw santrisError
 
         // Map and set santri list
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const formattedSantris = (santris || []).map((s: any) => ({
           id: s.id,
           nama_lengkap: s.nama_lengkap,
@@ -253,6 +253,7 @@ export default function PengampuPesanPage() {
     return () => {
       supabase.removeChannel(channel)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePercakapan, supabase])
 
   // Scroll to bottom on new messages
@@ -455,7 +456,7 @@ export default function PengampuPesanPage() {
             </div>
 
             {/* Chat Body */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-[#F8FAFC]">
+            <div className="flex-1 overflow-y-auto p-4 pb-32 md:p-6 md:pb-6 space-y-4 bg-[#F8FAFC]">
               {loadingMessages ? (
                 <div className="space-y-4">
                   <div className="flex justify-start">
@@ -515,7 +516,7 @@ export default function PengampuPesanPage() {
             </div>
 
             {/* Chat Footer */}
-            <form onSubmit={handleSend} className="p-4 bg-white border-t border-gray-200 flex gap-2">
+            <form onSubmit={handleSend} className="fixed bottom-0 left-0 right-0 md:static bg-white border-t border-gray-200 p-4 mb-16 md:mb-0 flex gap-2 z-30">
               <Input
                 placeholder="Tulis pesan..."
                 className="flex-1"

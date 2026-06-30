@@ -109,6 +109,18 @@ export async function loginWithEmail(
   // Set cookie role agar middleware bisa membacanya
   await setRoleCookie(role)
 
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('audit_trail').insert({
+        user_id: user.id,
+        aktivitas: `Login sebagai ${profile.role} — ${email}`
+      })
+    }
+  } catch {
+    // silently ignore — login must not fail because of audit logging
+  }
+
   return { success: true, role }
 }
 
@@ -151,6 +163,18 @@ export async function loginWithPhone(
 
   // Set cookie role = 'ortu'
   await setRoleCookie('ortu')
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('audit_trail').insert({
+        user_id: user.id,
+        aktivitas: `Login sebagai orang_tua — ${nomorHP}`
+      })
+    }
+  } catch {
+    // silently ignore — login must not fail because of audit logging
+  }
 
   return { success: true, role: 'ortu' }
 }

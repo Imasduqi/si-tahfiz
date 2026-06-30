@@ -6,9 +6,8 @@ import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { EmptyState } from '@/components/ui/empty-state'
-import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 import { toast } from 'sonner'
-import { Send, MessageSquare, User, Clock, Baby } from 'lucide-react'
+import { Send, MessageSquare, User, Baby } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Anak {
@@ -115,6 +114,7 @@ export default function OrtuPesanPage() {
 
         if (detailError) throw detailError
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const halaqah = santriDetail?.halaqah as any
         if (!halaqah || !halaqah.pengampu_id) {
           toast.error('Anak belum terdaftar di halaqah manapun atau pengampu tidak tersedia')
@@ -127,6 +127,7 @@ export default function OrtuPesanPage() {
         if (isMounted) setPengampuName(name)
 
         // 2. Find or create conversation
+        // eslint-disable-next-line prefer-const
         let { data: thread, error: threadError } = await supabase
           .from('percakapan')
           .select('*')
@@ -323,7 +324,7 @@ export default function OrtuPesanPage() {
         </div>
 
         {/* Chat Thread Messages Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/40">
+        <div className="flex-1 overflow-y-auto p-6 pb-32 md:pb-6 space-y-4 bg-gray-50/40">
           {loadingMessages ? (
             <div className="space-y-4">
               <div className="flex justify-start">
@@ -382,7 +383,7 @@ export default function OrtuPesanPage() {
         </div>
 
         {/* Chat Thread Input Area */}
-        <form onSubmit={handleSend} className="p-4 bg-white border-t border-gray-100 flex gap-2">
+        <form onSubmit={handleSend} className="fixed bottom-0 left-0 right-0 md:static bg-white border-t border-gray-100 p-4 mb-16 md:mb-0 flex gap-2 z-30">
           <Input
             placeholder="Tulis pesan ke Pengampu..."
             className="flex-1 rounded-full px-4 focus:ring-emerald-500 focus:border-emerald-500"
