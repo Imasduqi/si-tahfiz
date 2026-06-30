@@ -56,22 +56,23 @@ export function DashboardShell({ navItems, role, children }: DashboardShellProps
 
         const readIds = readRows?.map(r => r.pengumuman_id) || []
 
+        // Map 'ortu' role name to 'orang_tua' as stored in target_role
+        const targetRole = role === 'ortu' ? 'orang_tua' : role
+
         // 2. Query announcements matching user role
-        let query = supabase
+        const { data: allRows, error: queryError } = await supabase
           .from('pengumuman')
           .select('id, judul, isi')
-          .contains('target_role', [role])
+          .contains('target_role', [targetRole])
 
-        if (readIds.length > 0) {
-          query = query.not('id', 'in', `(${readIds.join(',')})`)
-        }
+        if (queryError) throw queryError
 
-        const { data: unreadRows, error: unreadError } = await query
-        if (unreadError) throw unreadError
+        // 3. Filter out announcements that have already been read
+        const toShow = (allRows ?? []).filter(p => !readIds.includes(p.id))
 
-        if (unreadRows && unreadRows.length > 0) {
-          setUnreadAnnouncements(unreadRows)
-          setCurrentAnnouncement(unreadRows[0])
+        if (toShow.length > 0) {
+          setUnreadAnnouncements(toShow)
+          setCurrentAnnouncement(toShow[0])
         }
       } catch (err) {
         console.error('Failed to check announcements:', err)

@@ -29,3 +29,13 @@ export function isWeekday(date: Date): boolean {
 export function phoneToEmail(nomorHP: string): string {
   return `${nomorHP}@ortu.sitahfiz`
 }
+
+export function formatDateWithDay(date: string): string {
+  return new Date(date).toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+}
+
