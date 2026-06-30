@@ -10,21 +10,19 @@ import { Table, TableColumn } from '@/components/ui/table'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 import { toast } from 'sonner'
 
-interface MergedAuditTrail {
+interface AuditTrailRecord {
   id: string
   user_id: string
   aktivitas: string
   created_at: string
-  profiles: {
-    nama_lengkap: string | null
-  } | null
+  nama_pengguna: string
 }
 
 export default function TuSistemAuditPage() {
   const supabase = createClient()
 
   // State
-  const [auditLogs, setAuditLogs] = useState<MergedAuditTrail[]>([])
+  const [auditLogs, setAuditLogs] = useState<AuditTrailRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterFrom, setFilterFrom] = useState('')
@@ -34,24 +32,47 @@ export default function TuSistemAuditPage() {
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Fetch audit trail
+  // Fetch audit trail using two-query approach.
+  // audit_trail.user_id references auth.users(id) — not profiles(id) directly —
+  // so PostgREST cannot resolve an embedded join. We fetch separately and merge.
   const fetchAuditLogs = async () => {
-    try {
-      setIsLoading(true)
-      const { data, error } = await supabase
-        .from('audit_trail')
-        .select('*, profiles(nama_lengkap)')
-        .order('created_at', { ascending: false })
+    setIsLoading(true)
 
-      if (error) throw error
-      // Cast the data to match our MergedAuditTrail interface
-      setAuditLogs((data as unknown as MergedAuditTrail[]) || [])
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan'
-      toast.error('Gagal mengambil data audit trail: ' + msg)
-    } finally {
+    // Step 1: fetch audit trail records only
+    const { data: auditData, error: auditError } = await supabase
+      .from('audit_trail')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (auditError) {
+      toast.error('Gagal memuat audit trail')
       setIsLoading(false)
+      return
     }
+
+    // Step 2: fetch all internal-role profiles to map user_id → name
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, nama_lengkap')
+
+    // Step 3: fetch all orang_tua in case ortu actions are also logged
+    const { data: ortuData } = await supabase
+      .from('orang_tua')
+      .select('id, nama_lengkap')
+
+    // Step 4: build a unified lookup map combining both sources
+    const nameMap = new Map<string, string>()
+    ;(profilesData ?? []).forEach((p) => nameMap.set(p.id, p.nama_lengkap))
+    ;(ortuData ?? []).forEach((o) => nameMap.set(o.id, o.nama_lengkap))
+
+    // Step 5: merge name into each audit record
+    const merged: AuditTrailRecord[] = (auditData ?? []).map((record) => ({
+      ...record,
+      nama_pengguna: nameMap.get(record.user_id) ?? 'Pengguna'
+    }))
+
+    setAuditLogs(merged)
+    setIsLoading(false)
   }
 
   useEffect(() => {
@@ -111,8 +132,7 @@ export default function TuSistemAuditPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       const activityMatches = log.aktivitas?.toLowerCase().includes(query)
-      const name = log.profiles?.nama_lengkap || 'Pengguna'
-      const nameMatches = name.toLowerCase().includes(query)
+      const nameMatches = log.nama_pengguna.toLowerCase().includes(query)
       if (!activityMatches && !nameMatches) return false
     }
 
@@ -136,7 +156,7 @@ export default function TuSistemAuditPage() {
   })
 
   // Table Columns
-  const columns: TableColumn<MergedAuditTrail>[] = [
+  const columns: TableColumn<AuditTrailRecord>[] = [
     {
       key: 'no',
       header: 'No',
@@ -145,17 +165,17 @@ export default function TuSistemAuditPage() {
     {
       key: 'created_at',
       header: 'Waktu',
-      render: (item: MergedAuditTrail) => formatDateTime(item.created_at),
+      render: (item: AuditTrailRecord) => formatDateTime(item.created_at),
     },
     {
       key: 'user',
       header: 'Nama Pengguna',
-      render: (item: MergedAuditTrail) => item.profiles?.nama_lengkap || 'Pengguna',
+      render: (item: AuditTrailRecord) => item.nama_pengguna,
     },
     {
       key: 'aktivitas',
       header: 'Aktivitas',
-      render: (item: MergedAuditTrail) => (
+      render: (item: AuditTrailRecord) => (
         <span className="whitespace-normal break-all leading-normal">
           {item.aktivitas}
         </span>

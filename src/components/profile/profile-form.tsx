@@ -3,12 +3,13 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { logout } from '@/lib/actions/auth'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
-import { UserCircle, Mail, Phone, Calendar, KeyRound, User as UserIcon, Edit2 } from 'lucide-react'
+import { UserCircle, Mail, Phone, Calendar, KeyRound, User as UserIcon, Edit2, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface ProfileFormProps {
@@ -234,6 +235,20 @@ export function ProfileForm({ role }: ProfileFormProps) {
     }
   }
 
+  // Handle Logout — calls the existing Server Action from Phase 2
+  // logout() internally clears the cookie, calls supabase.auth.signOut(), and redirects
+  const handleLogout = async () => {
+    const confirmed = window.confirm('Apakah kamu yakin ingin keluar?')
+    if (!confirmed) return
+
+    try {
+      await logout()
+      // redirect is handled server-side inside logout(); this line is a fallback
+    } catch {
+      // Next.js redirect() throws internally — this is expected and safe to ignore
+    }
+  }
+
   // Loading skeleton layout
   if (loading) {
     return (
@@ -433,6 +448,25 @@ export function ProfileForm({ role }: ProfileFormProps) {
           </div>
         </form>
       </Card>
+
+      {/* Logout Section — visually separated */}
+      <div className="pt-2 border-t border-[#F3F4F6]">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-[#374151]">Keluar dari Akun</p>
+            <p className="text-xs text-[#6B7280] mt-0.5">Sesi kamu akan diakhiri dan kamu akan diarahkan ke halaman login.</p>
+          </div>
+          <Button
+            variant="danger"
+            rounded={buttonRoundedProp}
+            onClick={handleLogout}
+            className="flex items-center gap-2 shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+            Keluar
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

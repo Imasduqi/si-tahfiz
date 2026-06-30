@@ -1,22 +1,27 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { Modal } from '@/components/ui/modal'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Table } from '@/components/ui/table'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
-import { Search, Plus, Edit, KeyRound, Trash2 } from 'lucide-react'
+import { Search, Plus, Edit, KeyRound, Trash2, Download, Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
 import { Profile, OrangTua } from '@/types'
-import { 
-  createUserAction, 
-  updateUserAction, 
-  resetPasswordAction, 
-  deleteUserAction 
+import {
+  createUserAction,
+  updateUserAction,
+  resetPasswordAction,
+  deleteUserAction,
 } from '@/lib/actions/tu-akun'
+import { bulkCreateOrangTua, type ImportPayload, type ImportResult } from '@/lib/actions/tu-import-ortu'
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface MergedAccount {
   id: string
@@ -26,11 +31,24 @@ interface MergedAccount {
   created_at: string
 }
 
+interface ImportRow {
+  rowNumber: number
+  namaLengkap: string
+  nomorHp: string
+  status: 'valid' | 'error'
+  errorMessage?: string
+}
+
+// Import modal step
+type ImportStep = 'upload' | 'preview' | 'result'
+
+// ─── Page Component ───────────────────────────────────────────────────────────
+
 export default function TuAkunPage() {
   console.log('[TuAkunPage] Component rendered')
   const supabase = createClient()
 
-  // State
+  // ── Existing CRUD State ─────────────────────────────────────────────────────
   const [accounts, setAccounts] = useState<MergedAccount[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [roleFilter, setRoleFilter] = useState<string>('all')
@@ -56,11 +74,21 @@ export default function TuAkunPage() {
   // Field Errors
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
-  // Load accounts
+  // ── Import State ────────────────────────────────────────────────────────────
+  const [isImportOpen, setIsImportOpen] = useState(false)
+  const [importStep, setImportStep] = useState<ImportStep>('upload')
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [isParsing, setIsParsing] = useState(false)
+  const [importResults, setImportResults] = useState<ImportRow[]>([])
+  const [isImporting, setIsImporting] = useState(false)
+  const [importFinalResult, setImportFinalResult] = useState<ImportResult | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // ── Data Fetching ───────────────────────────────────────────────────────────
   const fetchAccounts = async () => {
     try {
       setIsLoading(true)
-      
+
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -87,7 +115,7 @@ export default function TuAkunPage() {
           role: 'orang_tua' as const,
           email_or_phone: o.nomor_hp,
           created_at: o.created_at,
-        }))
+        })),
       ]
 
       // Sort by created_at desc
@@ -106,7 +134,8 @@ export default function TuAkunPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Open modals helper
+  // ── Existing CRUD Handlers ──────────────────────────────────────────────────
+
   const handleOpenAdd = () => {
     setSelectedAccount(null)
     setFormName('')
@@ -145,13 +174,12 @@ export default function TuAkunPage() {
     setIsDeleteOpen(true)
   }
 
-  // Handle Form Submission - Create / Update
   const handleSaveAccount = async (e: React.FormEvent) => {
     e.preventDefault()
     console.log('[handleSaveAccount] Called — selectedAccount:', selectedAccount?.id ?? 'NEW')
     console.log('[handleSaveAccount] formRole:', formRole, 'formName:', formName)
     setFormErrors({})
-    
+
     // Client-side Validation
     const errors: Record<string, string> = {}
     if (!formName.trim()) {
@@ -159,7 +187,6 @@ export default function TuAkunPage() {
     }
 
     if (!selectedAccount) {
-      // Create validation
       if (formRole === 'orang_tua') {
         if (!formPhone.trim()) {
           errors.nomor_hp = 'Nomor HP wajib diisi.'
@@ -174,7 +201,7 @@ export default function TuAkunPage() {
         } else if (!/\S+@\S+\.\S+/.test(formEmail)) {
           errors.email = 'Format email tidak valid.'
         }
-        
+
         if (!formPassword) {
           errors.password = 'Password wajib diisi.'
         } else if (formPassword.length < 8) {
@@ -190,26 +217,24 @@ export default function TuAkunPage() {
 
     try {
       setIsSubmitLoading(true)
-      
+
       if (selectedAccount) {
-        // Update account name
         const res = await updateUserAction({
           id: selectedAccount.id,
           nama_lengkap: formName,
-          role: selectedAccount.role
+          role: selectedAccount.role,
         })
 
         if (!res.success) throw new Error(res.error)
-        
+
         toast.success('Nama akun berhasil diperbarui.')
       } else {
-        // Create account
         const res = await createUserAction({
           nama_lengkap: formName,
           role: formRole,
           email: formRole === 'orang_tua' ? undefined : formEmail,
           nomor_hp: formRole === 'orang_tua' ? formPhone : undefined,
-          password: formRole === 'orang_tua' ? undefined : formPassword
+          password: formRole === 'orang_tua' ? undefined : formPassword,
         })
 
         if (!res.success) throw new Error(res.error)
@@ -227,7 +252,6 @@ export default function TuAkunPage() {
     }
   }
 
-  // Handle Form Submission - Reset Password
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormErrors({})
@@ -247,7 +271,7 @@ export default function TuAkunPage() {
       setIsSubmitLoading(true)
       const res = await resetPasswordAction({
         id: selectedAccount.id,
-        password_baru: formNewPassword
+        password_baru: formNewPassword,
       })
 
       if (!res.success) throw new Error(res.error)
@@ -262,7 +286,6 @@ export default function TuAkunPage() {
     }
   }
 
-  // Handle Form Submission - Delete User
   const handleDeleteAccount = async () => {
     if (!selectedAccount) return
 
@@ -271,7 +294,7 @@ export default function TuAkunPage() {
       const res = await deleteUserAction({
         id: selectedAccount.id,
         nama_lengkap: selectedAccount.nama_lengkap,
-        role: selectedAccount.role
+        role: selectedAccount.role,
       })
 
       if (!res.success) throw new Error(res.error)
@@ -287,14 +310,149 @@ export default function TuAkunPage() {
     }
   }
 
-  // Filter & Search logic
+  // ── Import Handlers ─────────────────────────────────────────────────────────
+
+  const handleDownloadTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Nama Lengkap', 'Nomor HP'],
+      ['Contoh: Budi Santoso', '081234567890'],
+    ])
+    ws['!cols'] = [{ wch: 30 }, { wch: 20 }]
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Template Akun Ortu')
+    XLSX.writeFile(wb, 'Template_Import_Akun_OrangTua.xlsx')
+    toast.success('Template berhasil diunduh.')
+  }
+
+  const handleOpenImport = () => {
+    setImportStep('upload')
+    setImportFile(null)
+    setImportResults([])
+    setImportFinalResult(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    setIsImportOpen(true)
+  }
+
+  const handleCloseImport = () => {
+    setIsImportOpen(false)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    setImportFile(file)
+  }
+
+  const validateRows = async (rows: { 'Nama Lengkap': string; 'Nomor HP': string | number }[]) => {
+    // Fetch all existing nomor_hp once to avoid N queries
+    const { data: existingOrtu } = await supabase
+      .from('orang_tua')
+      .select('nomor_hp')
+
+    const existingPhones = new Set((existingOrtu ?? []).map((o: { nomor_hp: string }) => o.nomor_hp))
+
+    const results: ImportRow[] = []
+    const seenInFile = new Set<string>() // catch duplicates within the same file
+
+    rows.forEach((row, index) => {
+      const rowNumber = index + 2 // +2: row 1 is header, data starts row 2
+      const nama = String(row['Nama Lengkap'] ?? '').trim()
+      const nomorHp = String(row['Nomor HP'] ?? '').trim().replace(/[^0-9]/g, '')
+
+      if (!nama) {
+        results.push({ rowNumber, namaLengkap: nama, nomorHp, status: 'error', errorMessage: 'Nama lengkap wajib diisi' })
+        return
+      }
+
+      if (!nomorHp || nomorHp.length < 10) {
+        results.push({ rowNumber, namaLengkap: nama, nomorHp, status: 'error', errorMessage: 'Nomor HP tidak valid (minimal 10 digit)' })
+        return
+      }
+
+      if (existingPhones.has(nomorHp)) {
+        results.push({ rowNumber, namaLengkap: nama, nomorHp, status: 'error', errorMessage: 'Nomor HP sudah terdaftar' })
+        return
+      }
+
+      if (seenInFile.has(nomorHp)) {
+        results.push({ rowNumber, namaLengkap: nama, nomorHp, status: 'error', errorMessage: 'Nomor HP duplikat di file ini' })
+        return
+      }
+
+      seenInFile.add(nomorHp)
+      results.push({ rowNumber, namaLengkap: nama, nomorHp, status: 'valid' })
+    })
+
+    setImportResults(results)
+  }
+
+  const handleParseFile = async () => {
+    if (!importFile) return
+    setIsParsing(true)
+    try {
+      const buffer = await importFile.arrayBuffer()
+      const wb = XLSX.read(buffer, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json<{ 'Nama Lengkap': string; 'Nomor HP': string | number }>(ws)
+
+      // Skip the example row if user didn't delete it
+      const validRows = rows.filter(
+        (r) => r['Nama Lengkap'] && !String(r['Nama Lengkap']).startsWith('Contoh:')
+      )
+
+      if (validRows.length === 0) {
+        toast.error('File tidak memiliki data. Pastikan file sesuai template dan isi data di bawah baris header.')
+        setIsParsing(false)
+        return
+      }
+
+      await validateRows(validRows)
+      setImportStep('preview')
+    } catch {
+      toast.error('Gagal membaca file. Pastikan file adalah format .xlsx atau .xls yang valid.')
+    } finally {
+      setIsParsing(false)
+    }
+  }
+
+  const handleConfirmImport = async () => {
+    setIsImporting(true)
+
+    const validRows: ImportPayload[] = importResults
+      .filter((r) => r.status === 'valid')
+      .map((r) => ({ namaLengkap: r.namaLengkap, nomorHp: r.nomorHp }))
+
+    const result = await bulkCreateOrangTua(validRows)
+
+    setIsImporting(false)
+    setImportFinalResult(result)
+    setImportStep('result')
+
+    if (result.success > 0) {
+      toast.success(
+        `${result.success} akun berhasil dibuat${result.failed > 0 ? `, ${result.failed} gagal` : ''}`
+      )
+    } else {
+      toast.error(`Semua ${result.failed} akun gagal dibuat. Periksa detail error.`)
+    }
+
+    // Refresh the main account list in background
+    await fetchAccounts()
+  }
+
+  // ── Derived Data ────────────────────────────────────────────────────────────
+
   const filteredAccounts = accounts.filter((acc) => {
     const matchesRole = roleFilter === 'all' || acc.role === roleFilter
     const matchesSearch = acc.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesRole && matchesSearch
   })
 
-  // Role labels helper
+  const validCount = importResults.filter((r) => r.status === 'valid').length
+  const errorCount = importResults.filter((r) => r.status === 'error').length
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'tu': return 'TU'
@@ -306,16 +464,17 @@ export default function TuAkunPage() {
     }
   }
 
-  // Table columns definition
+  // ── Table Columns ───────────────────────────────────────────────────────────
+
   const columns = [
     {
       key: 'no',
       header: 'No',
-      render: (_: unknown, index: number) => index + 1
+      render: (_: unknown, index: number) => index + 1,
     },
     {
       key: 'nama_lengkap',
-      header: 'Nama Lengkap'
+      header: 'Nama Lengkap',
     },
     {
       key: 'role',
@@ -330,16 +489,16 @@ export default function TuAkunPage() {
         }`}>
           {getRoleLabel(item.role)}
         </span>
-      )
+      ),
     },
     {
       key: 'email_or_phone',
-      header: 'Email/No HP'
+      header: 'Email/No HP',
     },
     {
       key: 'created_at',
       header: 'Tanggal Dibuat',
-      render: (item: MergedAccount) => formatDate(item.created_at)
+      render: (item: MergedAccount) => formatDate(item.created_at),
     },
     {
       key: 'aksi',
@@ -377,9 +536,54 @@ export default function TuAkunPage() {
             <span>Hapus</span>
           </Button>
         </div>
-      )
-    }
+      ),
+    },
   ]
+
+  // Preview table columns for import modal
+  const importPreviewColumns = [
+    {
+      key: 'rowNumber',
+      header: 'No Baris',
+      render: (row: ImportRow) => (
+        <span className="text-xs text-[#6B7280] font-mono">{row.rowNumber}</span>
+      ),
+    },
+    {
+      key: 'namaLengkap',
+      header: 'Nama Lengkap',
+      render: (row: ImportRow) => (
+        <span className="text-sm">{row.namaLengkap || <span className="text-[#9CA3AF] italic">—</span>}</span>
+      ),
+    },
+    {
+      key: 'nomorHp',
+      header: 'Nomor HP',
+      render: (row: ImportRow) => (
+        <span className="text-sm font-mono">{row.nomorHp || <span className="text-[#9CA3AF] italic">—</span>}</span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row: ImportRow) => (
+        <div className="space-y-1">
+          {row.status === 'valid' ? (
+            <Badge variant="success">Valid</Badge>
+          ) : (
+            <>
+              <Badge variant="danger">Error</Badge>
+              {row.errorMessage && (
+                <p className="text-xs text-[#DC2626] mt-1">{row.errorMessage}</p>
+              )}
+            </>
+          )}
+        </div>
+      ),
+    },
+  ]
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-4">
@@ -389,13 +593,34 @@ export default function TuAkunPage() {
           <h1 className="text-xl font-bold text-[#111827]">Manajemen Akun</h1>
           <p className="text-xs text-[#6B7280]">Kelola seluruh akun pengguna di lingkungan Tahfiz</p>
         </div>
-        <Button
-          onClick={handleOpenAdd}
-          className="flex items-center space-x-1.5 py-2.5 px-4 self-start sm:self-auto rounded-md shadow-none"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tambah Akun</span>
-        </Button>
+        {/* Action buttons: Download Template | Import dari Excel | Tambah Akun */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant="secondary"
+            onClick={handleDownloadTemplate}
+            className="flex items-center space-x-1.5 py-2.5 px-3.5 rounded-md shadow-none text-sm"
+            title="Unduh template Excel untuk import massal Orang Tua"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download Template</span>
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleOpenImport}
+            className="flex items-center space-x-1.5 py-2.5 px-3.5 rounded-md shadow-none text-sm"
+            title="Import akun Orang Tua dari file Excel"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Import dari Excel</span>
+          </Button>
+          <Button
+            onClick={handleOpenAdd}
+            className="flex items-center space-x-1.5 py-2.5 px-4 rounded-md shadow-none"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Akun</span>
+          </Button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -451,7 +676,7 @@ export default function TuAkunPage() {
         />
       )}
 
-      {/* Add / Edit Modal */}
+      {/* ── Add / Edit Modal ─────────────────────────────────────────────────── */}
       <Modal
         isOpen={isAddEditOpen}
         onClose={() => setIsAddEditOpen(false)}
@@ -542,17 +767,14 @@ export default function TuAkunPage() {
             >
               Batal
             </Button>
-            <Button
-              type="submit"
-              isLoading={isSubmitLoading}
-            >
+            <Button type="submit" isLoading={isSubmitLoading}>
               Simpan
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Reset Password Modal */}
+      {/* ── Reset Password Modal ─────────────────────────────────────────────── */}
       <Modal
         isOpen={isResetOpen}
         onClose={() => setIsResetOpen(false)}
@@ -585,17 +807,14 @@ export default function TuAkunPage() {
             >
               Batal
             </Button>
-            <Button
-              type="submit"
-              isLoading={isSubmitLoading}
-            >
+            <Button type="submit" isLoading={isSubmitLoading}>
               Simpan
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
+      {/* ── Delete Confirmation Modal ────────────────────────────────────────── */}
       <Modal
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
@@ -629,6 +848,252 @@ export default function TuAkunPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* ── Import Excel Modal ───────────────────────────────────────────────── */}
+      <Modal
+        isOpen={isImportOpen}
+        onClose={handleCloseImport}
+        title={
+          importStep === 'upload' ? 'Import Akun Orang Tua dari Excel' :
+          importStep === 'preview' ? 'Preview & Validasi Data Import' :
+          'Hasil Import Akun'
+        }
+        size="lg"
+        className="shadow-none p-4"
+      >
+        {/* ── Step 1: Upload ──────────────────────────────────────────────── */}
+        {importStep === 'upload' && (
+          <div className="space-y-5">
+            {/* Info banner */}
+            <div className="flex items-start gap-3 p-3 bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg">
+              <AlertCircle className="w-4 h-4 text-[#3B82F6] flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-[#1E40AF] leading-relaxed">
+                Upload file Excel sesuai template. Hanya akun <strong>Orang Tua</strong> yang dapat diimport secara massal.
+                Password akan dibuat otomatis dengan format <code className="bg-[#DBEAFE] px-1 rounded">TAHFIZ_&#123;nomorHP&#125;</code>.
+              </p>
+            </div>
+
+            {/* File drop zone */}
+            <div
+              className="border-2 border-dashed border-[#D1D5DB] rounded-lg p-8 text-center hover:border-[#10B981] transition-colors cursor-pointer group"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <FileSpreadsheet className="w-10 h-10 text-[#9CA3AF] group-hover:text-[#10B981] mx-auto mb-3 transition-colors" />
+              {importFile ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-[#111827]">{importFile.name}</p>
+                  <p className="text-xs text-[#6B7280]">{(importFile.size / 1024).toFixed(1)} KB — klik untuk mengganti</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-[#374151]">Klik untuk memilih file</p>
+                  <p className="text-xs text-[#9CA3AF]">Format yang diterima: .xlsx, .xls</p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={handleFileChange}
+                id="import-file-input"
+              />
+            </div>
+
+            {/* Tip: download template */}
+            <div className="flex items-center gap-2 text-xs text-[#6B7280]">
+              <span>Belum punya template?</span>
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="text-[#10B981] hover:text-[#059669] font-medium underline underline-offset-2 transition-colors"
+              >
+                Unduh Template Excel
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#E5E7EB]">
+              <Button
+                type="button"
+                variant="secondary"
+                rounded="md"
+                onClick={handleCloseImport}
+                className="shadow-none"
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                rounded="md"
+                onClick={handleParseFile}
+                disabled={!importFile}
+                isLoading={isParsing}
+                className="shadow-none"
+              >
+                Proses File
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 2: Preview ─────────────────────────────────────────────── */}
+        {importStep === 'preview' && (
+          <div className="space-y-4">
+            {/* Summary badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-[#374151] font-medium">Hasil Validasi:</span>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-[#059669]" />
+                <Badge variant="success">{validCount} baris valid</Badge>
+              </div>
+              {errorCount > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <XCircle className="w-4 h-4 text-[#DC2626]" />
+                  <Badge variant="danger">{errorCount} baris error</Badge>
+                </div>
+              )}
+            </div>
+
+            {/* Error info */}
+            {errorCount > 0 && (
+              <div className="p-3 bg-[#FEF2F2] border border-[#FEE2E2] text-[#991B1B] text-xs rounded-lg">
+                Baris dengan status <strong>Error</strong> tidak akan diimport. Hanya baris <strong>Valid</strong> yang akan diproses.
+              </div>
+            )}
+
+            {/* Preview table */}
+            <div className="max-h-72 overflow-y-auto rounded-lg border border-[#E5E7EB]">
+              <table className="w-full text-sm border-collapse">
+                <thead className="bg-[#F3F4F6] sticky top-0">
+                  <tr>
+                    {importPreviewColumns.map((col) => (
+                      <th key={col.key} className="px-4 py-2.5 text-left text-xs font-semibold text-[#374151] border-b border-[#E5E7EB]">
+                        {col.header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-[#E5E7EB]">
+                  {importResults.map((row, i) => (
+                    <tr
+                      key={i}
+                      className={`${row.status === 'error' ? 'bg-[#FFF5F5]' : 'hover:bg-[#F9FAFB]'} transition-colors`}
+                    >
+                      {importPreviewColumns.map((col) => (
+                        <td key={col.key} className="px-4 py-2.5 align-top">
+                          {col.render(row)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-between gap-2 pt-2 border-t border-[#E5E7EB]">
+              <Button
+                type="button"
+                variant="secondary"
+                rounded="md"
+                onClick={() => setImportStep('upload')}
+                className="shadow-none"
+              >
+                ← Kembali
+              </Button>
+              <Button
+                type="button"
+                rounded="md"
+                onClick={handleConfirmImport}
+                disabled={validCount === 0}
+                isLoading={isImporting}
+                className="shadow-none"
+              >
+                {isImporting ? 'Memproses...' : `Import ${validCount} Akun Valid`}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Result ──────────────────────────────────────────────── */}
+        {importStep === 'result' && importFinalResult && (
+          <div className="space-y-5">
+            {/* Result summary card */}
+            <div className={`p-4 rounded-lg border ${
+              importFinalResult.failed === 0
+                ? 'bg-[#F0FDF4] border-[#BBF7D0]'
+                : importFinalResult.success === 0
+                ? 'bg-[#FEF2F2] border-[#FEE2E2]'
+                : 'bg-[#FFFBEB] border-[#FDE68A]'
+            }`}>
+              <div className="flex items-center gap-3">
+                {importFinalResult.failed === 0 ? (
+                  <CheckCircle2 className="w-8 h-8 text-[#16A34A] flex-shrink-0" />
+                ) : importFinalResult.success === 0 ? (
+                  <XCircle className="w-8 h-8 text-[#DC2626] flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="w-8 h-8 text-[#D97706] flex-shrink-0" />
+                )}
+                <div>
+                  <p className="font-semibold text-[#111827]">
+                    {importFinalResult.failed === 0
+                      ? 'Import selesai!'
+                      : importFinalResult.success === 0
+                      ? 'Import gagal'
+                      : 'Import selesai dengan sebagian error'}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-1.5">
+                    <Badge variant="success">{importFinalResult.success} berhasil dibuat</Badge>
+                    {importFinalResult.failed > 0 && (
+                      <Badge variant="danger">{importFinalResult.failed} gagal</Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Error details */}
+            {importFinalResult.errors.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-[#374151]">Detail Kegagalan:</p>
+                <div className="max-h-52 overflow-y-auto rounded-lg border border-[#FEE2E2] divide-y divide-[#FEE2E2]">
+                  {importFinalResult.errors.map((err, i) => (
+                    <div key={i} className="flex items-start gap-3 px-4 py-2.5 bg-[#FFF5F5]">
+                      <XCircle className="w-4 h-4 text-[#DC2626] flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[#111827] truncate">{err.nama}</p>
+                        <p className="text-xs text-[#6B7280] font-mono">{err.nomorHp}</p>
+                        <p className="text-xs text-[#DC2626] mt-0.5">{err.reason}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Info: list refreshed */}
+            {importFinalResult.success > 0 && (
+              <div className="flex items-center gap-2 text-xs text-[#059669]">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Daftar akun telah diperbarui secara otomatis.</span>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end pt-2 border-t border-[#E5E7EB]">
+              <Button
+                type="button"
+                rounded="md"
+                onClick={handleCloseImport}
+                className="shadow-none"
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )
