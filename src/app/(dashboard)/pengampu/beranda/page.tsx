@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Card } from '@/components/ui/card'
@@ -11,6 +11,8 @@ import { getTodayString } from '@/lib/utils'
 import { Users, BookOpen, RefreshCw, Clock, ChevronRight, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
+import { PullIndicator } from '@/components/ui/pull-indicator'
 
 export default function PengampuBerandaPage() {
   const supabase = createClient()
@@ -26,128 +28,121 @@ export default function PengampuBerandaPage() {
   const [isDataLoading, setIsDataLoading] = useState<boolean>(true)
   const [hasHalaqah, setHasHalaqah] = useState<boolean>(true)
 
-  useEffect(() => {
-    let active = true
+  const fetchData = useCallback(async () => {
+    if (!currentUser) return
+    setIsDataLoading(true)
+    try {
+      // 1. Fetch halaqah
+      const { data: halaqahData, error: halaqahError } = await supabase
+        .from('halaqah')
+        .select('id, nama_halaqah, grade')
+        .eq('pengampu_id', currentUser.id)
+        .maybeSingle()
 
-    async function loadData() {
-      if (!currentUser) return
-      setIsDataLoading(true)
-      try {
-        // 1. Fetch halaqah
-        const { data: halaqahData, error: halaqahError } = await supabase
-          .from('halaqah')
-          .select('id, nama_halaqah, grade')
-          .eq('pengampu_id', currentUser.id)
-          .maybeSingle()
+      if (halaqahError) throw halaqahError
 
-        if (halaqahError) throw halaqahError
+      if (!halaqahData) {
+        setHasHalaqah(false)
+        setIsDataLoading(false)
+        return
+      }
 
-        if (!active) return
+      setHalaqah(halaqahData)
+      setHasHalaqah(true)
 
-        if (!halaqahData) {
-          setHasHalaqah(false)
-          setIsDataLoading(false)
-          return
-        }
+      // 2. Fetch santri list in halaqah
+      const { data: santriList, error: santriError } = await supabase
+        .from('santri')
+        .select('id, nama_lengkap')
+        .eq('halaqah_id', halaqahData.id)
 
-        setHalaqah(halaqahData)
-        setHasHalaqah(true)
+      if (santriError) throw santriError
 
-        // 2. Fetch santri list in halaqah
-        const { data: santriList, error: santriError } = await supabase
-          .from('santri')
-          .select('id, nama_lengkap')
-          .eq('halaqah_id', halaqahData.id)
+      const santriCount = santriList?.length || 0
+      setTotalSantri(santriCount)
 
-        if (santriError) throw santriError
-        if (!active) return
+      const santriIds = (santriList || []).map((s) => s.id)
 
-        const santriCount = santriList?.length || 0
-        setTotalSantri(santriCount)
+      // Fetch UKJ pending, setoran hari ini, and tikrar aktif in parallel
+      const today = getTodayString()
 
-        const santriIds = (santriList || []).map((s) => s.id)
+      let ukjPendingCountVal = 0
+      let setoranData: { santri_id: string; tipe: string }[] = []
+      let tikrarVal = 0
 
-        // Fetch UKJ pending, setoran hari ini, and tikrar aktif in parallel
-        const today = getTodayString()
-
-        let ukjPendingCountVal = 0
-        let setoranData: { santri_id: string; tipe: string }[] = []
-        let tikrarVal = 0
-
-        if (santriIds.length > 0) {
-          const [ukjRes, setoranRes, tikrarRes] = await Promise.all([
-            supabase
-              .from('ukj')
-              .select('id', { count: 'exact', head: true })
-              .eq('pengampu_id', currentUser.id)
-              .eq('status_approval', 'pending'),
-            supabase
-              .from('setoran')
-              .select('santri_id, tipe')
-              .eq('tanggal', today)
-              .in('santri_id', santriIds),
-            supabase
-              .from('tikrar')
-              .select('id', { count: 'exact', head: true })
-              .in('santri_id', santriIds)
-              .neq('status', 'selesai_rumah')
-          ])
-
-          if (ukjRes.error) throw ukjRes.error
-          if (setoranRes.error) throw setoranRes.error
-          if (tikrarRes.error) throw tikrarRes.error
-
-          ukjPendingCountVal = ukjRes.count || 0
-          setoranData = (setoranRes.data || []) as { santri_id: string; tipe: string }[]
-          tikrarVal = tikrarRes.count || 0
-        } else {
-          const { count, error } = await supabase
+      if (santriIds.length > 0) {
+        const [ukjRes, setoranRes, tikrarRes] = await Promise.all([
+          supabase
             .from('ukj')
             .select('id', { count: 'exact', head: true })
             .eq('pengampu_id', currentUser.id)
-            .eq('status_approval', 'pending')
+            .eq('status_approval', 'pending'),
+          supabase
+            .from('setoran')
+            .select('santri_id, tipe')
+            .eq('tanggal', today)
+            .in('santri_id', santriIds),
+          supabase
+            .from('tikrar')
+            .select('id', { count: 'exact', head: true })
+            .in('santri_id', santriIds)
+            .neq('status', 'selesai_rumah')
+        ])
 
-          if (error) throw error
-          ukjPendingCountVal = count || 0
-        }
+        if (ukjRes.error) throw ukjRes.error
+        if (setoranRes.error) throw setoranRes.error
+        if (tikrarRes.error) throw tikrarRes.error
 
-        if (!active) return
+        ukjPendingCountVal = ukjRes.count || 0
+        setoranData = (setoranRes.data || []) as { santri_id: string; tipe: string }[]
+        tikrarVal = tikrarRes.count || 0
+      } else {
+        const { count, error } = await supabase
+          .from('ukj')
+          .select('id', { count: 'exact', head: true })
+          .eq('pengampu_id', currentUser.id)
+          .eq('status_approval', 'pending')
 
-        setUkjPendingCount(ukjPendingCountVal)
-        setTikrarAktifCount(tikrarVal)
-
-        // Count distinct santri who have submitted Sabak today
-        const submittedSabakSantriIds = new Set(
-          setoranData
-            .filter((s) => s.tipe === 'sabak')
-            .map((s) => s.santri_id)
-        )
-        setSetoranHariIniCount(submittedSabakSantriIds.size)
-
-        // Find santri who have NOT submitted Sabak today
-        const remainder = (santriList || []).filter(
-          (s) => !submittedSabakSantriIds.has(s.id)
-        )
-        setNotSubmittedSantri(remainder)
-
-      } catch (err) {
-        console.error('Error fetching pengampu beranda data:', err)
-        toast.error('Gagal memuat data beranda')
-      } finally {
-        if (active) {
-          setIsDataLoading(false)
-        }
+        if (error) throw error
+        ukjPendingCountVal = count || 0
       }
-    }
 
+      setUkjPendingCount(ukjPendingCountVal)
+      setTikrarAktifCount(tikrarVal)
+
+      // Count distinct santri who have submitted Sabak today
+      const submittedSabakSantriIds = new Set(
+        setoranData
+          .filter((s) => s.tipe === 'sabak')
+          .map((s) => s.santri_id)
+      )
+      setSetoranHariIniCount(submittedSabakSantriIds.size)
+
+      // Find santri who have NOT submitted Sabak today
+      const remainder = (santriList || []).filter(
+        (s) => !submittedSabakSantriIds.has(s.id)
+      )
+      setNotSubmittedSantri(remainder)
+
+    } catch (err) {
+      console.error('Error fetching pengampu beranda data:', err)
+      toast.error('Gagal memuat data beranda')
+    } finally {
+      setIsDataLoading(false)
+    }
+  }, [currentUser, supabase])
+
+  useEffect(() => {
     if (!userLoading && currentUser) {
-      loadData()
+      fetchData()
     }
+  }, [currentUser, userLoading, fetchData])
 
-    return () => {
-      active = false
+  const { isRefreshing, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await fetchData()
     }
-  }, [currentUser, userLoading, supabase])
+  })
 
   if (userLoading || isDataLoading) {
     return (
@@ -184,6 +179,8 @@ export default function PengampuBerandaPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <PullIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} />
+
       {/* Greeting Card */}
       <Card className="bg-gradient-to-r from-emerald-500 to-teal-600 border-none p-6 md:p-8 text-white">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -33,3 +33,21 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Safe area inset for devices with home indicator */
+:root {
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-top: env(safe-area-inset-top, 0px);
+}
+
+.bottom-nav-safe {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}
+
+/* Smooth layout adjustment when keyboard appears on mobile */
+@supports (height: 100dvh) {
+  .chat-dvh {
+    height: 100dvh;
+  }
+}
+

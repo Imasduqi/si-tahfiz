@@ -13,6 +13,8 @@ import { toast } from 'sonner'
 import { getTodayString, formatDateWithDay, formatDateShort } from '@/lib/utils'
 import { Calendar, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { Santri, Halaqah } from '@/types'
+import { sendAlphaPushNotification } from '@/lib/actions/push-notification'
+
 
 export default function PengampuAbsensiPage() {
   const supabase = createClient()
@@ -193,6 +195,13 @@ export default function PengampuAbsensiPage() {
             // Silently log and ignore notification errors to avoid blocking the save
             console.error('Notification failed:', notifErr)
           }
+
+          // NEW: push notification for devices where app is closed
+          sendAlphaPushNotification(
+            selectedSantri.orang_tua_id,
+            selectedSantri.nama_lengkap,
+            selectedDate
+          ).catch(() => {}) // fire and forget — never block UI
         }
 
         toast.success("Absensi berhasil disimpan")

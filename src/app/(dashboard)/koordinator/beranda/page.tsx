@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Card } from '@/components/ui/card'
@@ -10,6 +10,8 @@ import { formatDate } from '@/lib/utils'
 import { Landmark, Users, ClipboardCheck, Megaphone, Calendar, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
+import { PullIndicator } from '@/components/ui/pull-indicator'
 
 interface HalaqahWithDetails {
   id: string
@@ -36,66 +38,62 @@ export default function KoordinatorBerandaPage() {
 
   const [isDataLoading, setIsDataLoading] = useState<boolean>(true)
 
+  const fetchData = useCallback(async () => {
+    if (!currentUser) return
+    setIsDataLoading(true)
+    try {
+      const today = new Date().toISOString().split('T')[0]
+
+      // Fetch all in parallel
+      const [
+        halaqahCountRes,
+        santriCountRes,
+        ukjPendingRes,
+        syahrulRes,
+        pekanRes,
+        halaqahListRes
+      ] = await Promise.all([
+        supabase.from('halaqah').select('*', { count: 'exact', head: true }),
+        supabase.from('santri').select('*', { count: 'exact', head: true }),
+        supabase.from('ukj').select('*', { count: 'exact', head: true }).eq('status_approval', 'pending'),
+        supabase.from('syahrul_quran').select('tanggal_mulai, tanggal_selesai').lte('tanggal_mulai', today).gte('tanggal_selesai', today).maybeSingle(),
+        supabase.from('pekan_murajaah').select('tanggal_mulai, tanggal_selesai').lte('tanggal_mulai', today).gte('tanggal_selesai', today).maybeSingle(),
+        supabase.from('halaqah').select('id, nama_halaqah, grade, profiles(nama_lengkap), santri(count)').order('nama_halaqah')
+      ])
+
+      if (halaqahCountRes.error) throw halaqahCountRes.error
+      if (santriCountRes.error) throw santriCountRes.error
+      if (ukjPendingRes.error) throw ukjPendingRes.error
+      if (syahrulRes.error) throw syahrulRes.error
+      if (pekanRes.error) throw pekanRes.error
+      if (halaqahListRes.error) throw halaqahListRes.error
+
+      setTotalHalaqah(halaqahCountRes.count || 0)
+      setTotalSantri(santriCountRes.count || 0)
+      setUkjPendingCount(ukjPendingRes.count || 0)
+      setSyahrulAktif(syahrulRes.data)
+      setPekanAktif(pekanRes.data)
+      setHalaqahList((halaqahListRes.data as unknown as HalaqahWithDetails[]) || [])
+
+    } catch (err) {
+      console.error('Error fetching koordinator dashboard data:', err)
+      toast.error('Gagal memuat data beranda')
+    } finally {
+      setIsDataLoading(false)
+    }
+  }, [currentUser, supabase])
+
   useEffect(() => {
-    let active = true
-
-    async function loadData() {
-      if (!currentUser) return
-      setIsDataLoading(true)
-      try {
-        const today = new Date().toISOString().split('T')[0]
-
-        // Fetch all in parallel
-        const [
-          halaqahCountRes,
-          santriCountRes,
-          ukjPendingRes,
-          syahrulRes,
-          pekanRes,
-          halaqahListRes
-        ] = await Promise.all([
-          supabase.from('halaqah').select('*', { count: 'exact', head: true }),
-          supabase.from('santri').select('*', { count: 'exact', head: true }),
-          supabase.from('ukj').select('*', { count: 'exact', head: true }).eq('status_approval', 'pending'),
-          supabase.from('syahrul_quran').select('tanggal_mulai, tanggal_selesai').lte('tanggal_mulai', today).gte('tanggal_selesai', today).maybeSingle(),
-          supabase.from('pekan_murajaah').select('tanggal_mulai, tanggal_selesai').lte('tanggal_mulai', today).gte('tanggal_selesai', today).maybeSingle(),
-          supabase.from('halaqah').select('id, nama_halaqah, grade, profiles(nama_lengkap), santri(count)').order('nama_halaqah')
-        ])
-
-        if (!active) return
-
-        if (halaqahCountRes.error) throw halaqahCountRes.error
-        if (santriCountRes.error) throw santriCountRes.error
-        if (ukjPendingRes.error) throw ukjPendingRes.error
-        if (syahrulRes.error) throw syahrulRes.error
-        if (pekanRes.error) throw pekanRes.error
-        if (halaqahListRes.error) throw halaqahListRes.error
-
-        setTotalHalaqah(halaqahCountRes.count || 0)
-        setTotalSantri(santriCountRes.count || 0)
-        setUkjPendingCount(ukjPendingRes.count || 0)
-        setSyahrulAktif(syahrulRes.data)
-        setPekanAktif(pekanRes.data)
-        setHalaqahList((halaqahListRes.data as unknown as HalaqahWithDetails[]) || [])
-
-      } catch (err) {
-        console.error('Error fetching koordinator dashboard data:', err)
-        toast.error('Gagal memuat data beranda')
-      } finally {
-        if (active) {
-          setIsDataLoading(false)
-        }
-      }
-    }
-
     if (!userLoading && currentUser) {
-      loadData()
+      fetchData()
     }
+  }, [currentUser, userLoading, fetchData])
 
-    return () => {
-      active = false
+  const { isRefreshing, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await fetchData()
     }
-  }, [currentUser, userLoading, supabase])
+  })
 
   if (userLoading || isDataLoading) {
     return (
@@ -122,6 +120,8 @@ export default function KoordinatorBerandaPage() {
 
   return (
     <div className="p-6 space-y-8 max-w-7xl mx-auto">
+      <PullIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} />
+
       {/* Greeting Banner */}
       <Card className="bg-gradient-to-r from-blue-600 to-indigo-700 border-none p-6 md:p-8 text-white">
         <div>

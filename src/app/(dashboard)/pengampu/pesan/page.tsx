@@ -330,7 +330,7 @@ export default function PengampuPesanPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-140px)] min-h-[500px] flex rounded-2xl border border-gray-200 bg-white shadow-md overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[100dvh] md:h-[calc(100vh-64px)] min-h-[500px] rounded-2xl border border-gray-200 bg-white shadow-md overflow-hidden">
       {/* LEFT COLUMN: Santri / Thread List */}
       <div
         className={cn(
@@ -456,7 +456,7 @@ export default function PengampuPesanPage() {
             </div>
 
             {/* Chat Body */}
-            <div className="flex-1 overflow-y-auto p-4 pb-32 md:p-6 md:pb-6 space-y-4 bg-[#F8FAFC]">
+            <div className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 md:pb-4 space-y-4 bg-[#F8FAFC]">
               {loadingMessages ? (
                 <div className="space-y-4">
                   <div className="flex justify-start">
@@ -516,7 +516,7 @@ export default function PengampuPesanPage() {
             </div>
 
             {/* Chat Footer */}
-            <form onSubmit={handleSend} className="fixed bottom-0 left-0 right-0 md:static bg-white border-t border-gray-200 p-4 mb-16 md:mb-0 flex gap-2 z-30">
+            <form onSubmit={handleSend} className="fixed bottom-0 left-0 right-0 md:static bg-white border-t border-gray-200 p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:pb-3 mb-16 md:mb-0 flex gap-2 z-30">
               <Input
                 placeholder="Tulis pesan..."
                 className="flex-1"

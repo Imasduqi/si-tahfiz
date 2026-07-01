@@ -307,7 +307,7 @@ export default function OrtuPesanPage() {
       )}
 
       {/* Chat Thread Container */}
-      <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden flex flex-col h-[600px]">
+      <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden flex flex-col h-[100dvh] md:h-[calc(100vh-64px)]">
         {/* Chat Thread Header */}
         <div className="px-6 py-4 border-b border-gray-100 bg-emerald-50/40 flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
@@ -324,7 +324,7 @@ export default function OrtuPesanPage() {
         </div>
 
         {/* Chat Thread Messages Area */}
-        <div className="flex-1 overflow-y-auto p-6 pb-32 md:pb-6 space-y-4 bg-gray-50/40">
+        <div className="flex-1 overflow-y-auto p-6 pb-24 md:pb-4 space-y-4 bg-gray-50/40">
           {loadingMessages ? (
             <div className="space-y-4">
               <div className="flex justify-start">
@@ -383,7 +383,7 @@ export default function OrtuPesanPage() {
         </div>
 
         {/* Chat Thread Input Area */}
-        <form onSubmit={handleSend} className="fixed bottom-0 left-0 right-0 md:static bg-white border-t border-gray-100 p-4 mb-16 md:mb-0 flex gap-2 z-30">
+        <form onSubmit={handleSend} className="fixed bottom-0 left-0 right-0 md:static bg-white border-t border-gray-100 p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:pb-3 mb-16 md:mb-0 flex gap-2 z-30">
           <Input
             placeholder="Tulis pesan ke Pengampu..."
             className="flex-1 rounded-full px-4 focus:ring-emerald-500 focus:border-emerald-500"

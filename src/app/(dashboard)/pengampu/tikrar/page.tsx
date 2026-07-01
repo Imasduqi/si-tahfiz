@@ -14,6 +14,8 @@ import { toast } from 'sonner'
 import { getTodayString, formatDateWithDay, formatDateShort } from '@/lib/utils'
 import { Calendar, ChevronLeft, ChevronRight, Check, Minus } from 'lucide-react'
 import { Santri, Setoran, Tikrar, Halaqah } from '@/types'
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
+import { PullIndicator } from '@/components/ui/pull-indicator'
 
 export default function PengampuTikrarPage() {
   const supabase = createClient()
@@ -39,55 +41,59 @@ export default function PengampuTikrarPage() {
   const [isUpdatingTikrar, setIsUpdatingTikrar] = useState<boolean>(false)
 
   // Fetch Halaqah & Santri (Run once when user is loaded)
-  useEffect(() => {
-    let active = true
+  const fetchData = useCallback(async () => {
+    if (!currentUser) return
+    setIsPageLoading(true)
 
-    async function initPage() {
-      if (!currentUser) return
-      setIsPageLoading(true)
+    try {
+      // 1. Get pengampu's halaqah
+      const { data: halaqahData, error: halaqahError } = await supabase
+        .from('halaqah')
+        .select('*')
+        .eq('pengampu_id', currentUser.id)
+        .single()
 
-      try {
-        // 1. Get pengampu's halaqah
-        const { data: halaqahData, error: halaqahError } = await supabase
-          .from('halaqah')
+      if (halaqahError) {
+        throw new Error('Halaqah tidak ditemukan. Anda belum terdaftar sebagai pengampu di halaqah mana pun.')
+      }
+
+      if (halaqahData) {
+        setHalaqah(halaqahData)
+
+        // 2. Get santri in that halaqah
+        const { data: santriData, error: santriError } = await supabase
+          .from('santri')
           .select('*')
-          .eq('pengampu_id', currentUser.id)
-          .single()
+          .eq('halaqah_id', halaqahData.id)
+          .order('nama_lengkap')
 
-        if (halaqahError) {
-          throw new Error('Halaqah tidak ditemukan. Anda belum terdaftar sebagai pengampu di halaqah mana pun.')
-        }
+        if (santriError) throw santriError
+        setSantriList(santriData || [])
+      }
+    } catch (err) {
+      console.error('Initialization error:', err)
+      const msg = err instanceof Error ? err.message : 'Gagal memuat data halaqah'
+      toast.error(msg)
+    } finally {
+      setIsPageLoading(false)
+    }
+  }, [currentUser, supabase])
 
-        if (active && halaqahData) {
-          setHalaqah(halaqahData)
+  useEffect(() => {
+    if (!userLoading) {
+      fetchData()
+    }
+  }, [userLoading, fetchData])
 
-          // 2. Get santri in that halaqah
-          const { data: santriData, error: santriError } = await supabase
-            .from('santri')
-            .select('*')
-            .eq('halaqah_id', halaqahData.id)
-            .order('nama_lengkap')
-
-          if (santriError) throw santriError
-          setSantriList(santriData || [])
-        }
-      } catch (err) {
-        console.error('Initialization error:', err)
-        const msg = err instanceof Error ? err.message : 'Gagal memuat data halaqah'
-        toast.error(msg)
-      } finally {
-        if (active) setIsPageLoading(false)
+  const { isRefreshing, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await fetchData()
+      if (selectedDate) {
+        await fetchManzilAndTikrar(selectedDate)
       }
     }
+  })
 
-    if (!userLoading) {
-      initPage()
-    }
-
-    return () => {
-      active = false
-    }
-  }, [currentUser, userLoading, supabase])
 
   // Fetch Manzil & Tikrar records
   const fetchManzilAndTikrar = useCallback(async (date: string) => {
@@ -360,6 +366,7 @@ export default function PengampuTikrarPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <PullIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} />
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>

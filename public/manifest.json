@@ -1,0 +1,50 @@
+{
+  "name": "SI-Tahfiz — MTs TQ Jamilurrahman",
+  "short_name": "SI-Tahfiz",
+  "description": "Sistem Informasi Manajemen Program Tahfiz Al-Qur'an",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#10B981",
+  "theme_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Input Setoran",
+      "short_name": "Setoran",
+      "description": "Buka halaman input setoran santri",
+      "url": "/pengampu/setoran",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Input Absensi",
+      "short_name": "Absensi",
+      "description": "Buka halaman input absensi",
+      "url": "/pengampu/absensi",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Manzil Anak",
+      "short_name": "Manzil",
+      "description": "Input setoran Manzil anak",
+      "url": "/ortu/manzil",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["education"],
+  "lang": "id"
+}

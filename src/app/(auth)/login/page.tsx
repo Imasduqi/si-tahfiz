@@ -254,6 +254,11 @@ function FooterYear() {
 // Halaman Login Email
 // ─────────────────────────────────────────────
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
@@ -261,6 +266,35 @@ export default function LoginPage() {
   // loadingBerita: true → render skeleton (sama di server & client saat SSR)
   const [loadingBerita, setLoadingBerita] = useState(true)
   const formRef = useRef<HTMLFormElement>(null)
+
+  const [showInstallBanner, setShowInstallBanner] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e as BeforeInstallPromptEvent)
+      setShowInstallBanner(true)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    
+    // Hide banner if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallBanner(false)
+    }
+    
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return
+    await deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    if (outcome === 'accepted') {
+      setShowInstallBanner(false)
+      setDeferredPrompt(null)
+    }
+  }
 
   const [state, formAction] = useFormState<LoginResult | null, FormData>(
     loginWithEmail,
@@ -333,6 +367,32 @@ export default function LoginPage() {
             <p style={{ fontSize: 12, color: '#6B7280', margin: '0 0 24px 0', lineHeight: 1.5 }}>
               Untuk Staff TU, Koordinator, Pengampu &amp; Kepala Sekolah
             </p>
+
+            {showInstallBanner && (
+              <div className="md:hidden flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <img src="/icon-192.png" alt="SI-Tahfiz" className="w-8 h-8 rounded-lg" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800">Install SI-Tahfiz</p>
+                    <p className="text-xs text-emerald-600">Tambahkan ke layar utama</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowInstallBanner(false)}
+                    className="text-xs text-gray-500 px-2 py-1"
+                  >
+                    Nanti
+                  </button>
+                  <button
+                    onClick={handleInstall}
+                    className="text-xs bg-emerald-500 text-white px-3 py-1 rounded-lg font-medium"
+                  >
+                    Install
+                  </button>
+                </div>
+              </div>
+            )}
 
             <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Error alert — state dimulai null, tidak ada mismatch */}

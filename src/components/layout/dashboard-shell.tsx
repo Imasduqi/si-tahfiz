@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { LucideIcon } from 'lucide-react'
+import { usePushSubscription } from '@/hooks/use-push-subscription'
 
 export interface NavItem {
   label: string
@@ -31,6 +32,47 @@ export function DashboardShell({ navItems, role, children }: DashboardShellProps
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [unreadAnnouncements, setUnreadAnnouncements] = useState<Announcement[]>([])
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null)
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false)
+
+  usePushSubscription(role === 'ortu' ? 'orang_tua' : role)
+
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+
+    const handleUpdate = async () => {
+      const registration = await navigator.serviceWorker.getRegistration()
+      if (!registration) return
+
+      // Check if there's already a waiting worker
+      if (registration.waiting) {
+        setShowUpdateBanner(true)
+      }
+
+      // Listen for new waiting worker
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing
+        if (!newWorker) return
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            setShowUpdateBanner(true)
+          }
+        })
+      })
+    }
+
+    handleUpdate()
+  }, [])
+
+  const handleReload = () => {
+    navigator.serviceWorker.getRegistration().then(registration => {
+      if (registration?.waiting) {
+        // Tell waiting worker to skip waiting
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+      }
+      window.location.reload()
+    })
+  }
   
   const supabase = createClient()
 
@@ -116,6 +158,17 @@ export function DashboardShell({ navItems, role, children }: DashboardShellProps
 
   return (
     <div className={cn("flex flex-col min-h-screen", isOrtu ? "bg-[#FFFDF5]" : "bg-white")}>
+      {showUpdateBanner && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-emerald-500 text-white text-sm text-center py-2 px-4 flex items-center justify-between">
+          <span className="text-sm">✨ Versi baru tersedia</span>
+          <button
+            onClick={handleReload}
+            className="ml-4 bg-white text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full"
+          >
+            Muat Ulang
+          </button>
+        </div>
+      )}
       <Topbar role={role} />
       <div className="flex flex-1">
         <Sidebar

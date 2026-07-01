@@ -11,6 +11,8 @@ import { formatDateWithDay } from '@/lib/utils'
 import { BookOpen, RefreshCw, Calendar, ChevronRight, GraduationCap, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
+import { PullIndicator } from '@/components/ui/pull-indicator'
 
 interface Child {
   id: string
@@ -44,47 +46,6 @@ export default function OrtuBerandaPage() {
 
   const [isPageLoading, setIsPageLoading] = useState<boolean>(true)
   const [isDataFetching, setIsDataFetching] = useState<boolean>(false)
-
-  // Fetch children list
-  useEffect(() => {
-    let active = true
-
-    async function fetchChildren() {
-      if (!currentUser) return
-      setIsPageLoading(true)
-      try {
-        const { data: children, error } = await supabase
-          .from('santri')
-          .select('id, nama_lengkap, kelas, grade, halaqah(nama_halaqah)')
-          .eq('orang_tua_id', currentUser.id)
-          .order('nama_lengkap')
-
-        if (error) throw error
-
-        if (active) {
-          const list = (children as unknown as Child[]) || []
-          setAnakList(list)
-          if (list.length > 0) {
-            setSelectedAnakId(list[0].id)
-          } else {
-            setIsPageLoading(false)
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching children:', err)
-        toast.error('Gagal memuat daftar anak')
-        if (active) setIsPageLoading(false)
-      }
-    }
-
-    if (!userLoading && currentUser) {
-      fetchChildren()
-    }
-
-    return () => {
-      active = false
-    }
-  }, [currentUser, userLoading, supabase])
 
   // Fetch active child details
   const fetchChildProgress = useCallback(async (childId: string) => {
@@ -155,11 +116,53 @@ export default function OrtuBerandaPage() {
     }
   }, [supabase])
 
+  // Fetch children list
+  const fetchData = useCallback(async () => {
+    if (!currentUser) return
+    setIsPageLoading(true)
+    try {
+      const { data: children, error } = await supabase
+        .from('santri')
+        .select('id, nama_lengkap, kelas, grade, halaqah(nama_halaqah)')
+        .eq('orang_tua_id', currentUser.id)
+        .order('nama_lengkap')
+
+      if (error) throw error
+
+      const list = (children as unknown as Child[]) || []
+      setAnakList(list)
+      
+      const activeId = selectedAnakId || (list.length > 0 ? list[0].id : null)
+      if (activeId) {
+        setSelectedAnakId(activeId)
+        await fetchChildProgress(activeId)
+      } else {
+        setIsPageLoading(false)
+      }
+    } catch (err) {
+      console.error('Error fetching children:', err)
+      toast.error('Gagal memuat daftar anak')
+      setIsPageLoading(false)
+    }
+  }, [currentUser, selectedAnakId, supabase, fetchChildProgress])
+
+  useEffect(() => {
+    if (!userLoading && currentUser) {
+      fetchData()
+    }
+  }, [currentUser, userLoading, fetchData])
+
   useEffect(() => {
     if (selectedAnakId) {
       fetchChildProgress(selectedAnakId)
     }
   }, [selectedAnakId, fetchChildProgress])
+
+  const { isRefreshing, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await fetchData()
+    }
+  })
 
   if (userLoading || isPageLoading) {
     return (
@@ -199,6 +202,8 @@ export default function OrtuBerandaPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      <PullIndicator isRefreshing={isRefreshing} pullDistance={pullDistance} />
+
       {/* Tab Switching for Multiple Children */}
       {anakList.length > 1 && (
         <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-150">
