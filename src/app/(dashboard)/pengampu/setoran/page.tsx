@@ -415,7 +415,7 @@ export default function PengampuSetoranPage() {
 
         if (err) {
           if (err.code === '23505') {
-            sabakErrorMsg = 'Setoran Sabak sudah ada untuk santri ini pada tanggal ini'
+            sabakErrorMsg = 'Setoran Sabaq sudah ada untuk santri ini pada tanggal ini'
           } else {
             sabakErrorMsg = err.message
           }
@@ -435,7 +435,7 @@ export default function PengampuSetoranPage() {
           })
         } catch (tikrarErr) {
           console.error('Failed to create Tikrar for Sabak:', tikrarErr)
-          toast.warning('Setoran Sabak disimpan, tetapi gagal membuat Tikrar otomatis')
+          toast.warning('Setoran Sabaq disimpan, tetapi gagal membuat Tikrar otomatis')
         }
       }
 
@@ -483,7 +483,7 @@ export default function PengampuSetoranPage() {
 
           if (err) {
             if (err.code === '23505') {
-              sabkiErrorMsg = 'Setoran Sabki sudah ada untuk santri ini pada tanggal ini'
+              sabkiErrorMsg = 'Setoran Sabqi sudah ada untuk santri ini pada tanggal ini'
             } else {
               sabkiErrorMsg = err.message
             }
@@ -503,7 +503,7 @@ export default function PengampuSetoranPage() {
             })
           } catch (tikrarErr) {
             console.error('Failed to create Tikrar for Sabki:', tikrarErr)
-            toast.warning('Setoran Sabki disimpan, tetapi gagal membuat Tikrar otomatis')
+            toast.warning('Setoran Sabqi disimpan, tetapi gagal membuat Tikrar otomatis')
           }
         }
       } else {
@@ -518,7 +518,7 @@ export default function PengampuSetoranPage() {
           setIsModalOpen(false)
           fetchSetorans(selectedDate)
         } else {
-          toast.error(sabakErrorMsg || 'Gagal menyimpan setoran Sabak')
+          toast.error(sabakErrorMsg || 'Gagal menyimpan setoran Sabaq')
         }
       } else {
         if (sabakSuccess && sabkiSuccess) {
@@ -526,17 +526,17 @@ export default function PengampuSetoranPage() {
           setIsModalOpen(false)
           fetchSetorans(selectedDate)
         } else if (sabakSuccess && !sabkiSuccess) {
-          toast.success('Sabak disimpan')
+          toast.success('Sabaq disimpan')
           if (sabkiErrorMsg.includes('sudah ada')) {
-            toast.error('Sabki sudah ada, silakan edit')
+            toast.error('Sabqi sudah ada, silakan edit')
           } else {
-            toast.error('Gagal menyimpan Sabki: ' + sabkiErrorMsg)
+            toast.error('Gagal menyimpan Sabqi: ' + sabkiErrorMsg)
           }
           setIsModalOpen(false)
           fetchSetorans(selectedDate)
         } else if (!sabakSuccess && sabkiSuccess) {
-          toast.success('Sabki disimpan')
-          toast.error('Gagal menyimpan Sabak: ' + sabakErrorMsg)
+          toast.success('Sabqi disimpan')
+          toast.error('Gagal menyimpan Sabaq: ' + sabakErrorMsg)
           setIsModalOpen(false)
           fetchSetorans(selectedDate)
         } else {
@@ -653,7 +653,7 @@ export default function PengampuSetoranPage() {
           <div>
             <h4 className="text-sm font-bold">Periode Syahrul Quran aktif</h4>
             <p className="text-xs font-medium mt-0.5 opacity-90">
-              Sabki dan Manzil tidak tersedia. Seluruh santri hanya melakukan setoran Sabak.
+              Sabqi dan Manzil tidak tersedia. Seluruh santri hanya melakukan setoran Sabaq.
             </p>
           </div>
         </div>
@@ -800,7 +800,7 @@ export default function PengampuSetoranPage() {
                   <div className="flex items-center gap-6 select-none">
                     {/* Sabak Completion Icon */}
                     <div className="flex items-center space-x-2">
-                      <span className="text-xs font-semibold text-[#6B7280]">Sabak:</span>
+                      <span className="text-xs font-semibold text-[#6B7280]">Sabaq:</span>
                       {hasSabak ? (
                         <div className="flex items-center space-x-1 bg-[#D1FAE5] text-[#065F46] px-2 py-0.5 rounded-full text-xs font-bold">
                           <Check className="w-3.5 h-3.5" />
@@ -817,7 +817,7 @@ export default function PengampuSetoranPage() {
                     {/* Sabki Completion Icon (Hidden completely during Syahrul Quran) */}
                     {!isSyahrulQuran && (
                       <div className="flex items-center space-x-2">
-                        <span className="text-xs font-semibold text-[#6B7280]">Sabki:</span>
+                        <span className="text-xs font-semibold text-[#6B7280]">Sabqi:</span>
                         {hasSabki ? (
                           <div className="flex items-center space-x-1 bg-[#D1FAE5] text-[#065F46] px-2 py-0.5 rounded-full text-xs font-bold">
                             <Check className="w-3.5 h-3.5" />
@@ -852,7 +852,7 @@ export default function PengampuSetoranPage() {
               {/* Sabak Fields Panel */}
               <div className="border border-[#E5E7EB] p-4 rounded-xl space-y-4 bg-white">
                 <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-2">
-                  <h4 className="font-bold text-[#111827] text-sm">SETORAN SABAK</h4>
+                  <h4 className="font-bold text-[#111827] text-sm">SETORAN SABAQ</h4>
                   <Badge variant={sabakStatusVal === 'lulus' ? 'success' : sabakStatusVal === 'mengulang' ? 'danger' : 'info'}>
                     Status: {sabakStatusVal}
                   </Badge>
@@ -911,7 +911,7 @@ export default function PengampuSetoranPage() {
               {!isSyahrulQuran && (
                 <div className="border border-[#E5E7EB] p-4 rounded-xl space-y-4 bg-white">
                   <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-2">
-                    <h4 className="font-bold text-[#111827] text-sm">SETORAN SABKI</h4>
+                    <h4 className="font-bold text-[#111827] text-sm">SETORAN SABQI</h4>
                     <Badge variant={sabkiStatusVal === 'lulus' ? 'success' : sabkiStatusVal === 'mengulang' ? 'danger' : 'info'}>
                       Status: {sabkiStatusVal}
                     </Badge>

@@ -223,7 +223,7 @@ export default function PengampuBerandaPage() {
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-sm font-medium text-gray-500">Setoran Sabak Hari Ini</div>
+            <div className="text-sm font-medium text-gray-500">Setoran Sabaq Hari Ini</div>
             <div className="text-2xl font-bold text-gray-900 mt-0.5">
               {setoranHariIniCount} <span className="text-sm font-normal text-gray-500">dari {totalSantri}</span>
             </div>
@@ -261,11 +261,11 @@ export default function PengampuBerandaPage() {
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
           <AlertCircle className="w-5 h-5 text-amber-500" />
-          <h2 className="text-lg font-bold text-gray-900">Belum Setor Sabak Hari Ini</h2>
+          <h2 className="text-lg font-bold text-gray-900">Belum Setor Sabaq Hari Ini</h2>
         </div>
         {notSubmittedSantri.length === 0 ? (
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-center">
-            <p className="text-emerald-800 font-medium">Alhamdulillah! Semua santri sudah menyetorkan Sabak hari ini.</p>
+            <p className="text-emerald-800 font-medium">Alhamdulillah! Semua santri sudah menyetorkan Sabaq hari ini.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">

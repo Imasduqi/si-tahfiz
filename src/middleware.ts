@@ -5,7 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 // Konstanta route
 // ─────────────────────────────────────────────
 
-const PUBLIC_ROUTES = ['/login', '/login/ortu', '/maintenance']
+const PUBLIC_ROUTES = ['/login', '/login/ortu', '/login/staff', '/maintenance']
 
 /** Halaman beranda per-role setelah login */
 const ROLE_HOME: Record<string, string> = {
@@ -81,14 +81,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url('/login', request))
   }
 
-  // ── Aturan: jika sudah login dan mengakses /login (bukan /login/ortu) ──
-  // Orang tua yang salah buka /login → redirect ke /login/ortu
-  if (pathname === '/login' && user && roleCookie === 'ortu') {
-    return NextResponse.redirect(url('/login/ortu', request))
+  // ── Aturan: jika sudah login dan mengakses /login/staff (bukan /login) ──
+  // Orang tua yang salah buka /login/staff → redirect ke /login
+  if (pathname === '/login/staff' && user && roleCookie === 'ortu') {
+    return NextResponse.redirect(url('/login', request))
   }
 
   // ── Aturan: jika sudah login dan mengakses halaman login → redirect ke beranda ──
-  if ((pathname === '/login' || pathname === '/login/ortu') && user && roleCookie) {
+  if ((pathname === '/login' || pathname === '/login/ortu' || pathname === '/login/staff') && user && roleCookie) {
     const home = ROLE_HOME[roleCookie] ?? '/login'
     return NextResponse.redirect(url(home, request))
   }
@@ -103,7 +103,7 @@ export async function middleware(request: NextRequest) {
 
   // ── Aturan: protected route tapi tidak login → redirect ke /login ──
   if (!user || !roleCookie) {
-    const loginPath = pathname.startsWith('/ortu') ? '/login/ortu' : '/login'
+    const loginPath = pathname.startsWith('/ortu') ? '/login' : '/login'
     return NextResponse.redirect(url(loginPath, request))
   }
 

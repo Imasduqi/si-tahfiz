@@ -328,7 +328,7 @@ export default function OrtuBerandaPage() {
                         <div className="text-sm font-bold text-gray-800 mt-0.5">{record.jumlah_baris} Baris</div>
                       </div>
                       <Badge variant={badgeVariant} className="px-3 py-1 rounded-full text-[10px] font-bold">
-                        {record.tipe}
+                        {record.tipe === 'sabak' ? 'Sabaq' : record.tipe === 'sabki' ? 'Sabqi' : record.tipe.charAt(0).toUpperCase() + record.tipe.slice(1)}
                       </Badge>
                     </div>
                   )

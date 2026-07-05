@@ -316,15 +316,17 @@ export function generateRekapExcel(params: {
     // Add sub-headers (Sabak/Sabki/Manzil)
     weekDefs.forEach(wDef => {
       wDef.types.forEach(type => {
-        const capType = type.charAt(0).toUpperCase() + type.slice(1)
+        let capType = type.charAt(0).toUpperCase() + type.slice(1)
+        if (type === 'sabak') capType = 'Sabaq'
+        if (type === 'sabki') capType = 'Sabqi'
         headerRow6.push(capType)
       })
     })
 
     // Summary columns
     const summaryLabels = [
-      'Total Sabak (Semester)',
-      'Total Sabki (Semester)',
+      'Total Sabaq (Semester)',
+      'Total Sabqi (Semester)',
       'Total Manzil (Semester)',
       'Total Hari Efektif',
       `Nilai Setoran (${konfigurasi.bobot_setoran}%)`,

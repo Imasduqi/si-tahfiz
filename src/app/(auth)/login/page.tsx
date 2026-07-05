@@ -1,28 +1,18 @@
 'use client'
 
+import './ortu/ortu.css'
 import './login.css'
+import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { useFormState, useFormStatus } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
-  Eye, EyeOff, Mail, Lock, BookOpen,
-  Loader2, AlertCircle, Newspaper, Calendar, ChevronRight,
+  Phone, BookOpen, Loader2, AlertCircle, Info, Newspaper, Calendar, ChevronRight
 } from 'lucide-react'
-import { loginWithEmail } from '@/lib/actions/auth'
+import { loginWithPhone } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/client'
 import { BeritaLogin } from '@/types'
 import type { LoginResult } from '@/lib/actions/auth'
-
-// ─────────────────────────────────────────────
-// Redirect map
-// ─────────────────────────────────────────────
-
-const ROLE_HOME: Record<string, string> = {
-  tu:          '/tu/akun',
-  koordinator: '/koordinator/beranda',
-  pengampu:    '/pengampu/beranda',
-  kepsek:      '/kepsek/dashboard',
-}
 
 // ─────────────────────────────────────────────
 // SubmitButton — komponen terpisah agar bisa
@@ -33,9 +23,10 @@ function SubmitButton() {
   const { pending } = useFormStatus()
   return (
     <button
-      id="btn-login-email"
+      id="btn-login-ortu"
       type="submit"
       disabled={pending}
+      className="btn-ortu-primary"
       style={{
         width: '100%',
         padding: '12px 20px',
@@ -224,18 +215,16 @@ function BeritaPanel({ beritaList, loading }: { beritaList: BeritaLogin[]; loadi
       </div>
 
       {/* Footer — tahun diisi client-only via CSS content trick: gunakan span kosong di SSR */}
-      <FooterYear />
+      <FooterYearLeft />
     </div>
   )
 }
 
 // ─────────────────────────────────────────────
-// FooterYear — render tahun hanya di client
-// Menghindari mismatch jika server & client
-// berada di timezone / waktu berbeda
+// FooterYearLeft — render tahun hanya di client
 // ─────────────────────────────────────────────
 
-function FooterYear() {
+function FooterYearLeft() {
   const [year, setYear] = useState<number | null>(null)
 
   useEffect(() => {
@@ -244,14 +233,31 @@ function FooterYear() {
 
   return (
     <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 40 }}>
-      {/* Render placeholder yang sama di server & client, lalu ganti setelah mount */}
       &copy;{year !== null ? ` ${year}` : ''} MTs TQ Jamilurrahman Yogyakarta
     </p>
   )
 }
 
 // ─────────────────────────────────────────────
-// Halaman Login Email
+// FooterYearCenter — render tahun hanya di client
+// ─────────────────────────────────────────────
+
+function FooterYearCenter() {
+  const [year, setYear] = useState<number | null>(null)
+
+  useEffect(() => {
+    setYear(new Date().getFullYear())
+  }, [])
+
+  return (
+    <p style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 28 }}>
+      &copy;{year !== null ? ` ${year}` : ''} MTs TQ Jamilurrahman Yogyakarta
+    </p>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Halaman Login Nomor HP (Orang Tua)
 // ─────────────────────────────────────────────
 
 interface BeforeInstallPromptEvent extends Event {
@@ -259,13 +265,11 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-export default function LoginPage() {
+export default function LoginOrtuPage() {
   const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
-  const [beritaList, setBeritaList] = useState<BeritaLogin[]>([])
-  // loadingBerita: true → render skeleton (sama di server & client saat SSR)
-  const [loadingBerita, setLoadingBerita] = useState(true)
   const formRef = useRef<HTMLFormElement>(null)
+  const [beritaList, setBeritaList] = useState<BeritaLogin[]>([])
+  const [loadingBerita, setLoadingBerita] = useState(true)
 
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
@@ -297,29 +301,27 @@ export default function LoginPage() {
   }
 
   const [state, formAction] = useFormState<LoginResult | null, FormData>(
-    loginWithEmail,
+    loginWithPhone,
     null
   )
 
-  // Redirect setelah login berhasil
+  // Redirect ke /ortu/beranda setelah login berhasil
   useEffect(() => {
-    if (state?.success && state.role) {
-      const destination = ROLE_HOME[state.role] ?? '/login'
-      router.replace(destination)
+    if (state?.success) {
+      router.replace('/ortu/beranda')
     }
   }, [state, router])
 
   // Ambil berita_login (publik — tidak perlu auth)
-  // Dijalankan hanya di client, tidak di server → tidak ada mismatch
   useEffect(() => {
     const fetchBerita = async () => {
       const supabase = createClient()
       const { data } = await supabase
         .from('berita_login')
-        .select('judul, isi, created_at, id, dibuat_oleh, updated_at')
+        .select('judul, isi, created_at, id')
         .order('created_at', { ascending: false })
         .limit(5)
-      setBeritaList(data ?? [])
+      setBeritaList((data as any) ?? [])
       setLoadingBerita(false)
     }
     fetchBerita()
@@ -327,7 +329,6 @@ export default function LoginPage() {
 
   return (
     <>
-
       <div
         style={{
           fontFamily: "'Inter', sans-serif",
@@ -358,14 +359,14 @@ export default function LoginPage() {
             backgroundColor: '#FFFFFF',
             border: '1px solid #E5E7EB',
             borderRadius: 16,
-            padding: '28px 24px',
+            padding: '32px 28px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
           }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: '0 0 4px 0' }}>
-              Masuk ke Akun
+              Masuk sebagai Orang Tua
             </h2>
             <p style={{ fontSize: 12, color: '#6B7280', margin: '0 0 24px 0', lineHeight: 1.5 }}>
-              Untuk Staff TU, Koordinator, Pengampu &amp; Kepala Sekolah
+              Gunakan nomor HP yang terdaftar di sistem
             </p>
 
             {showInstallBanner && (
@@ -411,27 +412,29 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Email field */}
+              {/* Nomor HP field */}
               <div>
                 <label
-                  htmlFor="email"
+                  htmlFor="nomor_hp"
                   style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}
                 >
-                  Email
+                  Nomor HP
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <Mail style={{
+                  <Phone style={{
                     position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
                     width: 15, height: 15, color: '#9CA3AF',
                   }} />
                   <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
+                    id="nomor_hp"
+                    name="nomor_hp"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
                     required
-                    placeholder="nama@email.com"
-                    className="focus-input"
+                    placeholder="08xxxxxxxxxx"
+                    pattern="[0-9]{10,15}"
+                    className="focus-input-ortu"
                     style={{
                       width: '100%',
                       paddingLeft: 38,
@@ -447,83 +450,52 @@ export default function LoginPage() {
                     }}
                   />
                 </div>
-              </div>
-
-              {/* Password field */}
-              <div>
-                <label
-                  htmlFor="password"
-                  style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}
-                >
-                  Password
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Lock style={{
-                    position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-                    width: 15, height: 15, color: '#9CA3AF',
-                  }} />
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    required
-                    placeholder="••••••••"
-                    className="focus-input"
-                    style={{
-                      width: '100%',
-                      paddingLeft: 38,
-                      paddingRight: 42,
-                      paddingTop: 10,
-                      paddingBottom: 10,
-                      borderRadius: 8,
-                      border: '1px solid #E5E7EB',
-                      backgroundColor: '#F9FAFB',
-                      color: '#111827',
-                      fontSize: 14,
-                      transition: 'border-color 0.2s, box-shadow 0.2s',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-                    style={{
-                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                      color: '#9CA3AF', display: 'flex', alignItems: 'center',
-                    }}
-                  >
-                    {showPassword
-                      ? <EyeOff style={{ width: 15, height: 15 }} />
-                      : <Eye style={{ width: 15, height: 15 }} />}
-                  </button>
+                {/* Hint */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5 }}>
+                  <Info style={{ width: 11, height: 11, color: '#9CA3AF', flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: '#9CA3AF' }}>
+                    Ketik angka saja, tanpa spasi atau tanda +
+                  </span>
                 </div>
               </div>
 
               <SubmitButton />
             </form>
 
-            {/* Divider + link ortu */}
+            {/* Info box */}
+            <div style={{
+              marginTop: 16,
+              padding: '10px 14px',
+              borderRadius: 8,
+              backgroundColor: '#ECFDF5',
+              border: '1px solid #A7F3D0',
+            }}>
+              <p style={{ fontSize: 12, color: '#065F46', margin: 0, lineHeight: 1.5 }}>
+                <strong>Pertama kali masuk?</strong> Password Anda diatur otomatis oleh sistem.
+                Hubungi Staff TU jika mengalami kesulitan.
+              </p>
+            </div>
+
+            {/* Divider + link staff */}
             <div style={{
               marginTop: 20, paddingTop: 16, borderTop: '1px solid #E5E7EB',
               textAlign: 'center',
             }}>
               <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>
-                Orang Tua / Wali?{' '}
-                <a
-                  href="/login/ortu"
-                  className="link-emerald"
+                Staff Sekolah?{' '}
+                <Link
+                  href="/login/staff"
+                  className="link-ortu-emerald"
                   style={{ color: '#10B981', fontWeight: 600, textDecoration: 'none' }}
                 >
-                  Masuk dengan Nomor HP
-                </a>
+                  Login sebagai Staff (TU/Koordinator/Pengampu/Kepsek)
+                </Link>
               </p>
             </div>
           </div>
 
           {/* Footer tahun — client-only */}
-          <FooterYear />
+          <FooterYearCenter />
         </div>
       </div>
     </>

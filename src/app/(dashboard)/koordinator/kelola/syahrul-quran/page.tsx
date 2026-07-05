@@ -251,7 +251,7 @@ export default function KoordinatorKelolaSyahrulQuranPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Kelola Syahrul Quran</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Tetapkan dan pantau periode pelaksanaan Syahrul Quran. Selama periode aktif, setoran Sabki dan Manzil ditiadakan.
+          Tetapkan dan pantau periode pelaksanaan Syahrul Quran. Selama periode aktif, setoran Sabqi dan Manzil ditiadakan.
         </p>
       </div>
 
@@ -340,7 +340,7 @@ export default function KoordinatorKelolaSyahrulQuranPage() {
             <Calendar className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div className="text-xs space-y-1 leading-relaxed">
               <p className="font-semibold">Informasi Pelaksanaan</p>
-              <p>Selama periode Syahrul Quran aktif, seluruh pengampu hanya dapat memasukkan setoran tipe Sabak. Fitur Sabki dan Manzil dinonaktifkan sementara dari antarmuka setoran.</p>
+              <p>Selama periode Syahrul Quran aktif, seluruh pengampu hanya dapat memasukkan setoran tipe Sabaq. Fitur Sabqi dan Manzil dinonaktifkan sementara dari antarmuka setoran.</p>
             </div>
           </div>
 
@@ -396,7 +396,7 @@ export default function KoordinatorKelolaSyahrulQuranPage() {
             <div className="space-y-2">
               <h4 className="font-bold text-gray-900">Apakah Anda yakin ingin mengakhiri periode ini?</h4>
               <p className="text-sm leading-relaxed text-gray-600">
-                Periode Syahrul Quran akan diakhiri hari ini. Sabki dan Manzil akan kembali tersedia untuk diinput oleh Pengampu. Lanjutkan?
+                Periode Syahrul Quran akan diakhiri hari ini. Sabqi dan Manzil akan kembali tersedia untuk diinput oleh Pengampu. Lanjutkan?
               </p>
             </div>
           </div>
