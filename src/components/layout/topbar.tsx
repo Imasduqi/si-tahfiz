@@ -3,11 +3,11 @@ import Link from 'next/link'
 import { UserCircle } from 'lucide-react'
 
 const ROLE_HOME_PATHS: Record<string, string> = {
-  tu: '/tu/akun',
+  tu:          '/tu/akun',
   koordinator: '/koordinator/beranda',
-  pengampu: '/pengampu/beranda',
-  ortu: '/ortu/beranda',
-  kepsek: '/kepsek/dashboard',
+  pengampu:    '/pengampu/beranda',
+  ortu:        '/ortu/beranda',
+  kepsek:      '/kepsek/dashboard',
 }
 
 export interface TopbarProps {
@@ -16,21 +16,45 @@ export interface TopbarProps {
 
 export function Topbar({ role }: TopbarProps) {
   return (
-    <header className="sticky top-0 z-40 w-full bg-white border-b border-[#E5E7EB] h-[56px] md:h-[64px] px-4 md:px-6 flex items-center justify-between">
-      <Link href={ROLE_HOME_PATHS[role] ?? '/login'} className="flex items-center space-x-2">
-        <span className="text-[#10B981] font-bold text-lg md:text-xl tracking-tight select-none">
-          SI-Tahfiz
-        </span>
+    <header
+      className="sticky top-0 z-40 w-full h-[56px] md:h-[64px] px-4 md:px-6 flex items-center justify-between"
+      style={{
+        background: '#FFFFFF',
+        borderBottom: '1px solid #E0EDE0',
+        boxShadow: '0 2px 12px rgba(34, 139, 34, 0.07)',
+      }}
+    >
+      {/* Logo + Brand */}
+      <Link href={ROLE_HOME_PATHS[role] ?? '/login'} className="flex items-center gap-3 group">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden border transition-transform group-hover:scale-105 duration-300"
+          style={{ background: '#228B22', borderColor: '#1A6B1A', padding: '4px' }}>
+          <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+        </div>
+        <div>
+          <span className="font-extrabold text-sm tracking-tight select-none transition-colors" style={{ color: '#1C3B1C' }}>
+            SI-<span style={{ color: '#228B22' }}>Tahfiz</span>
+          </span>
+        </div>
       </Link>
-      <div className="flex items-center space-x-4">
-        <Link
-          href={`/${role}/profil`}
-          className="text-[#6B7280] hover:text-[#10B981] transition-colors p-1.5 rounded-full hover:bg-[#F9FAFB]"
-          aria-label="Profil"
-        >
-          <UserCircle className="w-6 h-6 md:w-7 h-7" />
-        </Link>
-      </div>
+
+      {/* Profile Link */}
+      <Link
+        href={`/${role}/profil`}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 group"
+        style={{ background: '#F0F7F0', borderColor: '#C8DFC8', color: '#4A6B4A' }}
+        aria-label="Profil"
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.background = '#228B22'
+          ;(e.currentTarget as HTMLElement).style.color = '#FFFFFF'
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.background = '#F0F7F0'
+          ;(e.currentTarget as HTMLElement).style.color = '#4A6B4A'
+        }}
+      >
+        <UserCircle className="w-5 h-5" />
+        <span className="text-xs font-semibold hidden sm:block">Profil</span>
+      </Link>
     </header>
   )
 }

@@ -1,53 +1,215 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════
+   ROOT VARIABLES — Evergreen & Ivory
+═══════════════════════════════════════════════ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ev-green:        #228B22;   /* Evergreen primary */
+  --ev-green-dark:   #1A6B1A;   /* Darker evergreen for hover */
+  --ev-green-light:  #2EA82E;   /* Lighter evergreen */
+  --ev-ivory:        #FFFFF0;   /* Ivory background */
+  --ev-ivory-warm:   #F7F7E8;   /* Slightly warmer ivory */
+  --ev-ivory-deep:   #EFEFD8;   /* Deeper ivory for cards */
+  --ev-surface:      #FFFFFF;   /* White surface */
+  --ev-text:         #1C3B1C;   /* Deep forest text */
+  --ev-text-muted:   #4A6B4A;   /* Muted green-grey text */
+  --ev-border:       #C8DFC8;   /* Soft green border */
+  --primary:         #228B22;
+  --primary-light:   #E8F5E8;
+  --bg-base:         #FFFFF0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  scroll-behavior: smooth;
-}
+/* ═══════════════════════════════════════════════
+   BASE STYLES
+═══════════════════════════════════════════════ */
+html { scroll-behavior: smooth; }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--ev-ivory);
+  color: var(--ev-text);
 }
 
+/* ═══════════════════════════════════════════════
+   TAILWIND UTILITIES LAYER
+═══════════════════════════════════════════════ */
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+
+  /* ── Text wrapping */
+  .text-balance { text-wrap: balance; }
+
+  /* ── Glass / surface cards (Ivory theme) */
+  .glass {
+    background: rgba(255, 255, 240, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(200, 223, 200, 0.6);
   }
+  .glass-white {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(200, 223, 200, 0.7);
+    box-shadow: 0 8px 40px rgba(34, 139, 34, 0.08), 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .glass-green {
+    background: rgba(34, 139, 34, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(34, 139, 34, 0.2);
+  }
+  .glass-ivory {
+    background: rgba(255, 255, 240, 0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(200, 223, 200, 0.5);
+    box-shadow: 0 4px 24px rgba(34, 139, 34, 0.06);
+  }
+
+  /* ── Surface card (light) */
+  .card-surface {
+    background: #FFFFFF;
+    border: 1px solid #E0EDE0;
+    box-shadow: 0 2px 12px rgba(34, 139, 34, 0.06), 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card-surface-hover:hover {
+    box-shadow: 0 6px 24px rgba(34, 139, 34, 0.12), 0 2px 8px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+  }
+
+  /* ── Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #228B22 0%, #2EA82E 50%, #4CAF50 100%);
+  }
+  .gradient-text-gold {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-yellow-500;
+  }
+
+  /* ── Hero card — Evergreen */
+  .hero-card-green {
+    background: linear-gradient(135deg, #228B22 0%, #1A6B1A 60%, #145214 100%);
+    color: white;
+    border-radius: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 48px rgba(34, 139, 34, 0.3), 0 4px 16px rgba(0,0,0,0.1);
+  }
+
+  /* ── Left panel — Evergreen solid */
+  .panel-evergreen {
+    background: linear-gradient(160deg, #228B22 0%, #1E7A1E 40%, #145214 100%);
+  }
+
+  /* ── Dot / Grid patterns — Ivory-friendly */
+  .bg-dot-pattern {
+    background-image: radial-gradient(circle, rgba(34,139,34,0.2) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .bg-grid-pattern {
+    background-image:
+      linear-gradient(to right, rgba(34,139,34,0.07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(34,139,34,0.07) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+  .bg-leaf-pattern {
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%23228B22' fill-opacity='0.08' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  /* Lighter hex pattern for ivory backgrounds */
+  .bg-hex-light {
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%23228B22' fill-opacity='0.05' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  /* White hex pattern for green panels */
+  .bg-hex-white {
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%23FFFFFF' fill-opacity='0.07' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* ── Glow effects */
+  .glow-green  { box-shadow: 0 0 40px -8px rgba(34, 139, 34, 0.35), 0 8px 32px rgba(0,0,0,0.08); }
+  .glow-amber  { box-shadow: 0 0 32px -8px rgba(180, 120, 10, 0.3), 0 8px 24px rgba(0,0,0,0.06); }
+  .glow-red    { box-shadow: 0 0 32px -8px rgba(180, 50, 50, 0.3), 0 8px 24px rgba(0,0,0,0.06); }
+  .glow-ivory  { box-shadow: 0 0 40px -8px rgba(255, 255, 240, 0.5), 0 8px 32px rgba(34,139,34,0.15); }
+
+  /* ── Shimmer (for buttons on green bg) */
+  @keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  .animate-shimmer { animation: shimmer 1.5s ease-in-out; }
+
+  /* ── Entrance animations */
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.94); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes spinSlow {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes pulseBg {
+    0%, 100% { opacity: 0.5; }
+    50%       { opacity: 1; }
+  }
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-12px); }
+  }
+
+  .animate-fade-in-down  { animation: fadeInDown  0.5s ease-out both; }
+  .animate-fade-in-up    { animation: fadeInUp    0.5s ease-out both; }
+  .animate-scale-in      { animation: scaleIn     0.4s ease-out both; }
+  .animate-fade-in       { animation: fadeIn      0.5s ease-out both; }
+  .animate-spin-slow     { animation: spinSlow   20s linear infinite; }
+  .animate-pulse-bg      { animation: pulseBg     4s ease-in-out infinite; }
+  .animate-float         { animation: floatY      6s ease-in-out infinite; }
+
+  /* ── Animation delays */
+  .animate-delay-50  { animation-delay: 50ms; }
+  .animate-delay-100 { animation-delay: 100ms; }
+  .animate-delay-150 { animation-delay: 150ms; }
+  .animate-delay-200 { animation-delay: 200ms; }
+  .animate-delay-300 { animation-delay: 300ms; }
+  .animate-delay-400 { animation-delay: 400ms; }
+  .animate-delay-500 { animation-delay: 500ms; }
+  .animate-delay-600 { animation-delay: 600ms; }
+  .animate-delay-700 { animation-delay: 700ms; }
+  .animate-delay-800 { animation-delay: 800ms; }
+
+  /* ── Scrollbar hidden */
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
-/* Safe area inset for devices with home indicator */
+/* ═══════════════════════════════════════════════
+   SAFE AREA (PWA / Mobile)
+═══════════════════════════════════════════════ */
 :root {
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-top: env(safe-area-inset-top, 0px);
 }
+.bottom-nav-safe { padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
 
-.bottom-nav-safe {
-  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-}
-
-/* Smooth layout adjustment when keyboard appears on mobile */
 @supports (height: 100dvh) {
-  .chat-dvh {
-    height: 100dvh;
-  }
+  .chat-dvh { height: 100dvh; }
 }
-

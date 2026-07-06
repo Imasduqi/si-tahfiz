@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
-import { UserCircle, Mail, Phone, Calendar, KeyRound, User as UserIcon, Edit2, LogOut } from 'lucide-react'
+import { UserCircle, Mail, Phone, Calendar, KeyRound, User as UserIcon, Edit2, LogOut, Camera } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface ProfileFormProps {
@@ -24,6 +24,11 @@ export function ProfileForm({ role }: ProfileFormProps) {
   const [user, setUser] = useState<any>(null)
   const [profileData, setProfileData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  
+  // Profile Photo state
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Edit Nama state
   const [namaBaru, setNamaBaru] = useState('')
@@ -157,6 +162,28 @@ export function ProfileForm({ role }: ProfileFormProps) {
     } finally {
       setIsUpdatingNama(false)
     }
+  }
+
+  // Handle Photo Upload (UI Mockup)
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Limit size to 2MB
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Ukuran foto maksimal 2MB')
+      return
+    }
+
+    setIsUploadingPhoto(true)
+    
+    // Simulate upload delay & create local preview
+    setTimeout(() => {
+      const objectUrl = URL.createObjectURL(file)
+      setPhotoPreview(objectUrl)
+      setIsUploadingPhoto(false)
+      toast.success('Foto profil berhasil diunggah secara lokal')
+    }, 1000)
   }
 
   // Handle Password Change
@@ -293,93 +320,94 @@ export function ProfileForm({ role }: ProfileFormProps) {
   }
 
   return (
-    <div className={`max-w-4xl mx-auto ${spacingClass} p-4 md:p-6`}>
-      {/* Title */}
-      <div className="flex items-center justify-between pb-2 border-b border-[#F3F4F6]">
-        <h1 className="text-2xl font-bold text-[#111827]">Profil Saya</h1>
+    <div className="max-w-2xl mx-auto space-y-4 p-4 md:p-6 animate-fade-in-up">
+      
+      {/* ── HERO PROFILE CARD (Evergreen) */}
+      <div className="rounded-3xl p-6 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #228B22 0%, #1E7A1E 55%, #145214 100%)', boxShadow: '0 8px 40px rgba(34,139,34,0.25)' }}>
+        <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/8 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full blur-xl pointer-events-none" />
+        <div className="absolute inset-0 bg-hex-white opacity-60 rounded-3xl pointer-events-none" />
+
+        {/* Avatar + name */}
+        <div className="relative z-10 flex flex-col items-center text-center">
+          {/* Avatar clickable */}
+          <div
+            className="relative group/avatar cursor-pointer mb-4"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handlePhotoChange}
+            />
+            <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-white/30 shadow-2xl bg-white/20 flex items-center justify-center transition-transform group-hover/avatar:scale-105 duration-300">
+              {isUploadingPhoto ? (
+                <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
+              ) : photoPreview ? (
+                <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <UserCircle className="w-20 h-20 text-white/60" />
+              )}
+              <div className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300">
+                <Camera className="w-6 h-6 text-white mb-1" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-wider">Ubah</span>
+              </div>
+            </div>
+            {/* Camera badge */}
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md border-2 border-emerald-700">
+              <Camera className="w-4 h-4 text-emerald-700" />
+            </div>
+          </div>
+
+          <h2 className="text-white font-extrabold text-xl mb-1">{profileData?.nama_lengkap || '-'}</h2>
+          <span className="bg-amber-400/20 border border-amber-400/30 text-amber-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+            {roleLabelMap[role]}
+          </span>
+        </div>
+
+        {/* Info row */}
+        <div className="relative z-10 mt-6 grid grid-cols-2 gap-3">
+          {isOrangTua ? (
+            <div className="bg-white/10 border border-white/20 rounded-2xl p-3.5 backdrop-blur-sm">
+              <p className="text-emerald-300/70 text-[10px] font-bold uppercase tracking-wider mb-1">Nomor HP</p>
+              <p className="text-white font-bold text-sm">{profileData?.nomor_hp || '-'}</p>
+            </div>
+          ) : (
+            <div className="bg-white/10 border border-white/20 rounded-2xl p-3.5 backdrop-blur-sm">
+              <p className="text-emerald-300/70 text-[10px] font-bold uppercase tracking-wider mb-1">Email</p>
+              <p className="text-white font-bold text-sm truncate">{profileData?.email || '-'}</p>
+            </div>
+          )}
+          <div className="bg-white/10 border border-white/20 rounded-2xl p-3.5 backdrop-blur-sm">
+            <p className="text-emerald-300/70 text-[10px] font-bold uppercase tracking-wider mb-1">Bergabung</p>
+            <p className="text-white font-bold text-sm">{formatJoinDate(profileData?.created_at)}</p>
+          </div>
+        </div>
+
+        {/* Edit button */}
+        <div className="relative z-10 mt-4">
+          <button
+            onClick={handleFocusEditNama}
+            className="w-full flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 border border-white/20 text-white text-sm font-bold py-2.5 rounded-2xl transition-all duration-200 backdrop-blur-sm"
+          >
+            <Edit2 className="w-4 h-4" />
+            Ubah Nama
+          </button>
+        </div>
       </div>
 
-      {/* Card 1 — Info Akun (read-only display) */}
-      <Card className={`${cardShadowStyle} ${cardPadding} relative overflow-hidden`}>
-        {/* Subtle decorative background glow */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#10B981]/5 rounded-full -mr-16 -mt-16 pointer-events-none" />
-
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          <div className="flex-shrink-0">
-            <UserCircle className="w-20 h-20 text-[#10B981] transition-transform hover:scale-105 duration-300" />
+      {/* ── EDIT NAMA */}
+      <div className="rounded-2xl p-5 relative overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #C8DFC8', boxShadow: '0 2px 12px rgba(34,139,34,0.07)' }}>
+        <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full pointer-events-none" style={{ background: 'rgba(34,139,34,0.05)' }} />
+        <div className="flex items-center gap-3 mb-4 relative z-10">
+          <div className="p-2.5 rounded-xl" style={{ background: '#F0F7F0' }}>
+            <UserIcon className="w-4 h-4" style={{ color: '#228B22' }} />
           </div>
-          
-          <div className="flex-1 w-full space-y-4 text-center sm:text-left">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <h2 className="text-xl font-bold text-[#111827]">
-                  {profileData?.nama_lengkap || '-'}
-                </h2>
-                <div className="mt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <Badge variant="info">
-                    {roleLabelMap[role]}
-                  </Badge>
-                </div>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                rounded={buttonRoundedProp}
-                onClick={handleFocusEditNama}
-                className="self-center sm:self-start mt-2 sm:mt-0 flex items-center gap-1.5 text-xs py-2"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                Ubah Nama
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-[#F3F4F6] text-sm text-left">
-              {/* Email / Nomor HP Info field */}
-              {isOrangTua ? (
-                <div className="flex items-center gap-3 bg-[#F9FAFB] p-3 rounded-lg border border-[#E5E7EB]/50">
-                  <Phone className="w-5 h-5 text-[#6B7280]" />
-                  <div>
-                    <p className="text-xs text-[#6B7280] font-medium">Nomor HP</p>
-                    <p className="text-sm font-semibold text-[#111827]">
-                      {profileData?.nomor_hp || '-'}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 bg-[#F9FAFB] p-3 rounded-lg border border-[#E5E7EB]/50">
-                  <Mail className="w-5 h-5 text-[#6B7280]" />
-                  <div>
-                    <p className="text-xs text-[#6B7280] font-medium">Email</p>
-                    <p className="text-sm font-semibold text-[#111827]">
-                      {profileData?.email || '-'}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Tanggal Bergabung */}
-              <div className="flex items-center gap-3 bg-[#F9FAFB] p-3 rounded-lg border border-[#E5E7EB]/50">
-                <Calendar className="w-5 h-5 text-[#6B7280]" />
-                <div>
-                  <p className="text-xs text-[#6B7280] font-medium">Tanggal Bergabung</p>
-                  <p className="text-sm font-semibold text-[#111827]">
-                    {formatJoinDate(profileData?.created_at)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <h3 className="text-base font-bold" style={{ color: '#1C3B1C' }}>Ubah Nama Lengkap</h3>
         </div>
-      </Card>
-
-      {/* Card 2 — Edit Nama Form */}
-      <Card className={`${cardShadowStyle} ${cardPadding}`}>
-        <div className="flex items-center gap-2 mb-4">
-          <UserIcon className="w-5 h-5 text-[#10B981]" />
-          <h3 className="text-lg font-bold text-[#111827]">Ubah Nama Lengkap</h3>
-        </div>
-        
-        <form onSubmit={handleUpdateNama} className="space-y-4">
+        <form onSubmit={handleUpdateNama} className="space-y-3 relative z-10">
           <Input
             ref={nameInputRef}
             label="Nama Lengkap"
@@ -389,7 +417,7 @@ export function ProfileForm({ role }: ProfileFormProps) {
             required
             minLength={2}
           />
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end">
             <Button
               type="submit"
               variant="primary"
@@ -400,16 +428,18 @@ export function ProfileForm({ role }: ProfileFormProps) {
             </Button>
           </div>
         </form>
-      </Card>
+      </div>
 
-      {/* Card 3 — Ganti Password Form */}
-      <Card className={`${cardShadowStyle} ${cardPadding}`}>
-        <div className="flex items-center gap-2 mb-4">
-          <KeyRound className="w-5 h-5 text-[#10B981]" />
-          <h3 className="text-lg font-bold text-[#111827]">Ganti Password</h3>
+      {/* ── GANTI PASSWORD */}
+      <div className="rounded-2xl p-5 relative overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #FDE68A', boxShadow: '0 2px 12px rgba(180,130,10,0.07)' }}>
+        <div className="absolute -left-4 -bottom-4 w-20 h-20 rounded-full pointer-events-none" style={{ background: 'rgba(180,130,10,0.06)' }} />
+        <div className="flex items-center gap-3 mb-4 relative z-10">
+          <div className="p-2.5 rounded-xl" style={{ background: '#FFFBEB' }}>
+            <KeyRound className="w-4 h-4" style={{ color: '#B45309' }} />
+          </div>
+          <h3 className="text-base font-bold" style={{ color: '#78350F' }}>Ganti Password</h3>
         </div>
-
-        <form onSubmit={handleChangePassword} className="space-y-4">
+        <form onSubmit={handleChangePassword} className="space-y-3 relative z-10">
           <Input
             type="password"
             label="Password Lama"
@@ -436,7 +466,7 @@ export function ProfileForm({ role }: ProfileFormProps) {
             required
             minLength={8}
           />
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end pt-1">
             <Button
               type="submit"
               variant="primary"
@@ -447,14 +477,14 @@ export function ProfileForm({ role }: ProfileFormProps) {
             </Button>
           </div>
         </form>
-      </Card>
+      </div>
 
-      {/* Logout Section — visually separated */}
-      <div className="pt-2 border-t border-[#F3F4F6]">
+      {/* ── LOGOUT */}
+      <div className="rounded-2xl p-5" style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', boxShadow: '0 2px 12px rgba(180,50,50,0.06)' }}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-[#374151]">Keluar dari Akun</p>
-            <p className="text-xs text-[#6B7280] mt-0.5">Sesi kamu akan diakhiri dan kamu akan diarahkan ke halaman login.</p>
+            <p className="text-sm font-bold" style={{ color: '#991B1B' }}>Keluar dari Akun</p>
+            <p className="text-xs mt-0.5" style={{ color: '#DC2626', opacity: 0.7 }}>Sesi kamu akan diakhiri dan diarahkan ke halaman login.</p>
           </div>
           <Button
             variant="danger"

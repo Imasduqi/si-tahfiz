@@ -1,23 +1,16 @@
 'use client'
 
-import './ortu/ortu.css'
-import './login.css'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { useFormState, useFormStatus } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
-  Phone, BookOpen, Loader2, AlertCircle, Info, Newspaper, Calendar, ChevronRight
+  Phone, Loader2, AlertCircle, Info, Newspaper, Calendar, ChevronRight, Sparkles, BookOpen
 } from 'lucide-react'
 import { loginWithPhone } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/client'
 import { BeritaLogin } from '@/types'
 import type { LoginResult } from '@/lib/actions/auth'
-
-// ─────────────────────────────────────────────
-// SubmitButton — komponen terpisah agar bisa
-// memakai useFormStatus dari react-dom
-// ─────────────────────────────────────────────
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -26,251 +19,151 @@ function SubmitButton() {
       id="btn-login-ortu"
       type="submit"
       disabled={pending}
-      className="btn-ortu-primary"
-      style={{
-        width: '100%',
-        padding: '12px 20px',
-        borderRadius: '8px',
-        fontWeight: 600,
-        fontSize: '14px',
-        backgroundColor: '#10B981',
-        color: '#FFFFFF',
-        border: 'none',
-        cursor: pending ? 'not-allowed' : 'pointer',
-        transition: 'background-color 0.2s',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        opacity: pending ? 0.7 : 1,
-      }}
+      className={`w-full py-3.5 px-4 rounded-2xl font-bold text-sm text-white border-none cursor-pointer transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden group ${pending ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}`}
+      style={{ background: 'linear-gradient(135deg, #228B22 0%, #2EA82E 60%, #3DB33D 100%)', boxShadow: '0 4px 20px rgba(34,139,34,0.35)' }}
     >
+      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none rounded-2xl" />
       {pending ? (
         <>
-          <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
-          Memproses…
+          <Loader2 className="w-5 h-5 animate-spin relative z-10" />
+          <span className="relative z-10">Memproses…</span>
         </>
       ) : (
-        'Masuk'
+        <span className="relative z-10 tracking-wide">Masuk Sekarang</span>
       )}
     </button>
   )
 }
 
-// ─────────────────────────────────────────────
-// BeritaCard — satu item berita
-// tanggal diformat di client saja (state)
-// ─────────────────────────────────────────────
-
 function BeritaCard({ berita }: { berita: BeritaLogin }) {
-  // Gunakan state agar format tanggal hanya dijalankan di client
-  // sehingga tidak ada mismatch server ↔ client
   const [tanggal, setTanggal] = useState('')
-
   useEffect(() => {
-    setTanggal(
-      new Date(berita.created_at).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })
-    )
+    setTanggal(new Date(berita.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }))
   }, [berita.created_at])
 
   return (
-    <div
-      style={{
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: 12,
-        padding: '16px 20px',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-        transition: 'box-shadow 0.2s, border-color 0.2s',
-        cursor: 'default',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'
-        e.currentTarget.style.borderColor = '#10B981'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'
-        e.currentTarget.style.borderColor = '#E5E7EB'
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, color: '#111827', margin: 0, lineHeight: 1.4 }}>
+    <div className="rounded-2xl p-4 hover:bg-white/20 transition-all duration-300 group cursor-default border border-white/20 bg-white/10">
+      <div className="flex justify-between items-start gap-2 mb-2">
+        <h3 className="text-sm font-bold text-white leading-snug group-hover:text-green-100 transition-colors">
           {berita.judul}
         </h3>
-        <ChevronRight style={{ width: 14, height: 14, color: '#D1D5DB', flexShrink: 0, marginTop: 2 }} />
+        <div className="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-colors flex-shrink-0">
+          <ChevronRight className="w-3 h-3 text-white/70 group-hover:text-white" />
+        </div>
       </div>
-      <p style={{
-        fontSize: 13,
-        color: '#6B7280',
-        margin: '0 0 8px 0',
-        lineHeight: 1.6,
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-      } as React.CSSProperties}>
-        {berita.isi}
-      </p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <Calendar style={{ width: 11, height: 11, color: '#9CA3AF' }} />
-        {/* Render kosong dulu (server), isi setelah mount (client) */}
-        <span style={{ fontSize: 11, color: '#9CA3AF' }}>{tanggal}</span>
+      <p className="text-xs text-white/65 mb-3 leading-relaxed line-clamp-2">{berita.isi}</p>
+      <div className="flex items-center gap-1.5 bg-white/15 w-fit px-2.5 py-1 rounded-lg">
+        <Calendar className="w-3 h-3 text-green-200" />
+        <span className="text-[10px] font-semibold text-green-200 uppercase tracking-wide">{tanggal}</span>
       </div>
     </div>
   )
 }
 
-// ─────────────────────────────────────────────
-// BeritaPanel — kolom kiri (desktop only)
-// ─────────────────────────────────────────────
-
+/* ── LEFT PANEL (Evergreen #228B22) */
 function BeritaPanel({ beritaList, loading }: { beritaList: BeritaLogin[]; loading: boolean }) {
   return (
-    <div style={{
-      flex: '0 0 75%',
-      maxWidth: '75%',
-      padding: '48px 40px',
-      display: 'flex',
-      flexDirection: 'column',
-      borderRight: '1px solid #E5E7EB',
-      minHeight: '100vh',
-    }}>
-      {/* Brand Header */}
-      <div style={{ marginBottom: 40 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            backgroundColor: '#10B981',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
-          }}>
-            <BookOpen style={{ width: 22, height: 22, color: '#FFFFFF' }} />
+    <div
+      className="hidden lg:flex lg:flex-[0_0_50%] flex-col min-h-screen relative overflow-hidden"
+      style={{ background: 'linear-gradient(160deg, #228B22 0%, #1E7A1E 50%, #145214 100%)' }}
+    >
+      {/* White hex pattern overlay */}
+      <div className="absolute inset-0 bg-hex-white pointer-events-none" />
+
+      {/* Soft light orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-20 -left-20 w-[400px] h-[400px] bg-white/8 rounded-full blur-[100px] animate-pulse-bg" />
+        <div className="absolute bottom-0 right-0 w-[350px] h-[350px] bg-green-900/30 rounded-full blur-[80px] animate-pulse-bg animate-delay-300" />
+      </div>
+
+      {/* Decorative circles */}
+      <div className="absolute top-8 right-8 w-40 h-40 border border-white/10 rounded-full animate-spin-slow" />
+      <div className="absolute top-14 right-14 w-20 h-20 border border-white/8 rounded-full animate-spin-slow" style={{ animationDirection: 'reverse', animationDuration: '18s' }} />
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col h-full p-12 xl:p-16">
+        {/* Logo + Brand */}
+        <div className="flex items-center gap-4 mb-14 animate-fade-in-down">
+          <div className="w-12 h-12 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center shadow-lg overflow-hidden">
+            <img src="/logo.png" alt="Logo" className="w-9 h-9 object-contain" />
           </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>SI-Tahfiz</h1>
-            <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>MTs TQ Jamilurrahman Yogyakarta</p>
+            <h1 className="text-white font-extrabold text-xl tracking-tight leading-none">SI-Tahfiz</h1>
+            <p className="text-green-200/80 text-xs font-medium mt-0.5">MTs TQ Jamilurrahman Yogyakarta</p>
           </div>
         </div>
-      </div>
 
-      {/* Hero text */}
-      <div style={{ marginBottom: 36 }}>
-        <h2 style={{ fontSize: 30, fontWeight: 700, color: '#111827', margin: '0 0 8px 0', lineHeight: 1.3 }}>
-          Sistem Informasi<br />
-          <span style={{ color: '#10B981' }}>Manajemen Tahfiz</span>
-        </h2>
-        <p style={{ fontSize: 14, color: '#6B7280', margin: 0, lineHeight: 1.6 }}>
-          Platform terpadu untuk memantau progres hafalan, absensi, dan penilaian santri.
+        {/* Hero text */}
+        <div className="mb-10 animate-fade-in-up animate-delay-100">
+          <div className="inline-flex items-center gap-2 bg-white/15 border border-white/20 rounded-full px-4 py-1.5 mb-5">
+            <Sparkles className="w-3.5 h-3.5 text-green-200" />
+            <span className="text-green-100 text-xs font-bold uppercase tracking-widest">Platform Tahfiz Digital</span>
+          </div>
+          <h2 className="text-4xl xl:text-5xl font-extrabold text-white leading-tight mb-4">
+            Sistem<br />
+            <span className="text-green-200">Informasi</span><br />
+            Manajemen Tahfiz
+          </h2>
+          <p className="text-white/60 text-sm leading-relaxed max-w-sm">
+            Platform terpadu untuk memantau progres hafalan, absensi, dan penilaian santri secara real-time.
+          </p>
+        </div>
+
+        {/* Berita Feed */}
+        <div className="flex-1 animate-fade-in-up animate-delay-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Newspaper className="w-4 h-4 text-green-200" />
+            <h3 className="text-white/80 text-xs font-bold uppercase tracking-widest">Informasi Terbaru</h3>
+          </div>
+          <div className="space-y-3 overflow-y-auto max-h-[360px] pr-1 scrollbar-hide">
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-2xl p-4 animate-pulse bg-white/10 border border-white/15">
+                  <div className="h-4 bg-white/15 rounded-lg mb-2 w-3/4" />
+                  <div className="h-3 bg-white/10 rounded-lg w-full" />
+                </div>
+              ))
+              : beritaList.length === 0
+                ? (
+                  <div className="rounded-2xl p-8 text-center bg-white/10 border border-white/15">
+                    <BookOpen className="w-8 h-8 text-white/30 mx-auto mb-3" />
+                    <p className="text-white/50 text-sm">Belum ada informasi terbaru.</p>
+                  </div>
+                )
+                : beritaList.map((b) => <BeritaCard key={b.id} berita={b} />)
+            }
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="text-white/30 text-xs font-medium mt-8">
+          © {new Date().getFullYear()} MTs TQ Jamilurrahman Yogyakarta
         </p>
       </div>
-
-      {/* Berita Section */}
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <Newspaper style={{ width: 16, height: 16, color: '#10B981' }} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Informasi Terbaru
-          </span>
-        </div>
-
-        {loading ? (
-          /* Skeleton loader — ditampilkan sama di server & client saat mount */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[0, 1, 2].map((i) => (
-              <div key={i} style={{
-                backgroundColor: '#F9FAFB',
-                border: '1px solid #E5E7EB',
-                borderRadius: 12,
-                padding: '16px 20px',
-              }}>
-                <div style={{ height: 14, backgroundColor: '#E5E7EB', borderRadius: 6, marginBottom: 8, width: '60%' }} />
-                <div style={{ height: 12, backgroundColor: '#E5E7EB', borderRadius: 6, marginBottom: 6, width: '90%' }} />
-                <div style={{ height: 12, backgroundColor: '#E5E7EB', borderRadius: 6, width: '75%' }} />
-              </div>
-            ))}
-          </div>
-        ) : beritaList.length === 0 ? (
-          /* Empty state */
-          <div style={{
-            textAlign: 'center',
-            padding: '48px 24px',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-              <Newspaper style={{ width: 48, height: 48, color: '#D1D5DB' }} />
-            </div>
-            <p style={{ fontSize: 14, fontWeight: 600, color: '#374151', margin: '0 0 4px 0' }}>Belum ada pengumuman</p>
-            <p style={{ fontSize: 13, color: '#6B7280', margin: 0 }}>Pengumuman dari sekolah akan tampil di sini</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {beritaList.map((berita) => (
-              <BeritaCard key={berita.id} berita={berita} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Footer — tahun diisi client-only via CSS content trick: gunakan span kosong di SSR */}
-      <FooterYearLeft />
     </div>
   )
 }
-
-// ─────────────────────────────────────────────
-// FooterYearLeft — render tahun hanya di client
-// ─────────────────────────────────────────────
-
-function FooterYearLeft() {
-  const [year, setYear] = useState<number | null>(null)
-
-  useEffect(() => {
-    setYear(new Date().getFullYear())
-  }, [])
-
-  return (
-    <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 40 }}>
-      &copy;{year !== null ? ` ${year}` : ''} MTs TQ Jamilurrahman Yogyakarta
-    </p>
-  )
-}
-
-// ─────────────────────────────────────────────
-// FooterYearCenter — render tahun hanya di client
-// ─────────────────────────────────────────────
 
 function FooterYearCenter() {
   const [year, setYear] = useState<number | null>(null)
-
-  useEffect(() => {
-    setYear(new Date().getFullYear())
-  }, [])
-
+  useEffect(() => { setYear(new Date().getFullYear()) }, [])
   return (
-    <p style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 28 }}>
-      &copy;{year !== null ? ` ${year}` : ''} MTs TQ Jamilurrahman Yogyakarta
+    <p className="text-xs font-medium text-center mt-5" style={{ color: '#6B8B6B' }}>
+      © {year ?? ''} MTs TQ Jamilurrahman Yogyakarta
     </p>
   )
 }
-
-// ─────────────────────────────────────────────
-// Halaman Login Nomor HP (Orang Tua)
-// ─────────────────────────────────────────────
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-export default function LoginOrtuPage() {
+export default function OrtuLoginPage() {
   const router = useRouter()
   const formRef = useRef<HTMLFormElement>(null)
   const [beritaList, setBeritaList] = useState<BeritaLogin[]>([])
   const [loadingBerita, setLoadingBerita] = useState(true)
-
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
 
@@ -281,12 +174,7 @@ export default function LoginOrtuPage() {
       setShowInstallBanner(true)
     }
     window.addEventListener('beforeinstallprompt', handler)
-    
-    // Hide banner if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setShowInstallBanner(false)
-    }
-    
+    if (window.matchMedia('(display-mode: standalone)').matches) setShowInstallBanner(false)
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
@@ -294,25 +182,15 @@ export default function LoginOrtuPage() {
     if (!deferredPrompt) return
     await deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') {
-      setShowInstallBanner(false)
-      setDeferredPrompt(null)
-    }
+    if (outcome === 'accepted') { setShowInstallBanner(false); setDeferredPrompt(null) }
   }
 
-  const [state, formAction] = useFormState<LoginResult | null, FormData>(
-    loginWithPhone,
-    null
-  )
+  const [state, formAction] = useFormState<LoginResult | null, FormData>(loginWithPhone, null)
 
-  // Redirect ke /ortu/beranda setelah login berhasil
   useEffect(() => {
-    if (state?.success) {
-      router.replace('/ortu/beranda')
-    }
+    if (state?.success) router.replace('/ortu/beranda')
   }, [state, router])
 
-  // Ambil berita_login (publik — tidak perlu auth)
   useEffect(() => {
     const fetchBerita = async () => {
       const supabase = createClient()
@@ -328,103 +206,89 @@ export default function LoginOrtuPage() {
   }, [])
 
   return (
-    <>
+    /* Outer wrapper: Ivory background */
+    <div
+      className="min-h-screen flex flex-col lg:flex-row"
+      style={{ backgroundColor: '#FFFFF0' }}
+    >
+      {/* LEFT — Evergreen panel */}
+      <BeritaPanel beritaList={beritaList} loading={loadingBerita} />
+
+      {/* RIGHT — Ivory form area */}
       <div
-        style={{
-          fontFamily: "'Inter', sans-serif",
-          backgroundColor: '#FFFFFF',
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'row',
-        }}
+        className="flex-1 flex flex-col justify-center items-center p-6 lg:p-14 relative overflow-hidden"
+        style={{ backgroundColor: '#FFFFF0' }}
       >
-        {/* ── Kolom Kiri: Berita (desktop only via CSS class) ── */}
-        <div className="login-news-col">
-          <BeritaPanel beritaList={beritaList} loading={loadingBerita} />
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 bg-hex-light pointer-events-none" />
+        {/* Soft green orb */}
+        <div className="absolute top-[-10%] right-[-5%] w-72 h-72 rounded-full blur-[100px] pointer-events-none" style={{ background: 'rgba(34,139,34,0.07)' }} />
+        <div className="absolute bottom-[-5%] left-[-5%] w-60 h-60 rounded-full blur-[80px] pointer-events-none" style={{ background: 'rgba(34,139,34,0.05)' }} />
+
+        {/* Mobile Header */}
+        <div className="lg:hidden z-10 w-full max-w-[420px] mb-8 text-center animate-fade-in-down">
+          <div className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center shadow-lg mb-4 overflow-hidden border"
+            style={{ background: '#228B22', borderColor: '#1A6B1A' }}>
+            <img src="/logo.png" alt="Logo SI-Tahfiz" className="w-12 h-12 object-contain" />
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight" style={{ color: '#1C3B1C' }}>SI-Tahfiz</h1>
+          <p className="text-xs font-medium mt-1" style={{ color: '#4A6B4A' }}>MTs TQ Jamilurrahman Yogyakarta</p>
         </div>
 
-        {/* ── Kolom Kanan: Form Login ── */}
-        <div
-          className="login-form-col"
-          style={{
-            backgroundColor: '#FFFFFF',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            padding: '40px 32px',
-          }}
-        >
-          {/* Form Card */}
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: 16,
-            padding: '32px 28px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+        {/* Form Card */}
+        <div className="w-full max-w-[420px] z-10 animate-fade-in-up animate-delay-200">
+          <div className="rounded-3xl p-8 lg:p-10" style={{
+            background: '#FFFFFF',
+            border: '1px solid #D4E8D4',
+            boxShadow: '0 8px 40px rgba(34,139,34,0.1), 0 2px 8px rgba(0,0,0,0.05)',
           }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: '0 0 4px 0' }}>
-              Masuk sebagai Orang Tua
-            </h2>
-            <p style={{ fontSize: 12, color: '#6B7280', margin: '0 0 24px 0', lineHeight: 1.5 }}>
-              Gunakan nomor HP yang terdaftar di sistem
-            </p>
 
+            {/* Header */}
+            <div className="mb-7">
+              <h2 className="text-2xl font-extrabold mb-1" style={{ color: '#1C3B1C' }}>Selamat Datang 👋</h2>
+              <p className="text-sm font-medium" style={{ color: '#6B8B6B' }}>
+                Masuk sebagai <span className="font-bold" style={{ color: '#228B22' }}>Orang Tua / Wali</span>
+              </p>
+            </div>
+
+            {/* Install Banner */}
             {showInstallBanner && (
-              <div className="md:hidden flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <img src="/icon-192.png" alt="SI-Tahfiz" className="w-8 h-8 rounded-lg" />
+              <div className="flex items-center justify-between rounded-2xl p-4 mb-6 animate-scale-in border"
+                style={{ background: '#F0F7F0', borderColor: '#C8DFC8' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center p-1 border" style={{ borderColor: '#D4E8D4' }}>
+                    <img src="/icon-192.png" alt="App" className="w-full h-full object-contain rounded-lg" />
+                  </div>
                   <div>
-                    <p className="text-sm font-semibold text-emerald-800">Install SI-Tahfiz</p>
-                    <p className="text-xs text-emerald-600">Tambahkan ke layar utama</p>
+                    <p className="text-sm font-bold" style={{ color: '#1C3B1C' }}>Install Aplikasi</p>
+                    <p className="text-[11px] font-medium" style={{ color: '#4A6B4A' }}>Akses lebih cepat & mudah</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowInstallBanner(false)}
-                    className="text-xs text-gray-500 px-2 py-1"
-                  >
-                    Nanti
-                  </button>
-                  <button
-                    onClick={handleInstall}
-                    className="text-xs bg-emerald-500 text-white px-3 py-1 rounded-lg font-medium"
-                  >
-                    Install
-                  </button>
+                <div className="flex flex-col gap-1.5">
+                  <button onClick={handleInstall} className="text-xs text-white px-4 py-1.5 rounded-lg font-bold transition-all hover:opacity-90" style={{ background: '#228B22' }}>Install</button>
+                  <button onClick={() => setShowInstallBanner(false)} className="text-[10px] font-medium text-center" style={{ color: '#4A6B4A' }}>Nanti Saja</button>
                 </div>
               </div>
             )}
 
-            <form ref={formRef} action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Error alert — state dimulai null, tidak ada mismatch */}
+            {/* Form */}
+            <form ref={formRef} action={formAction} className="flex flex-col gap-5">
               {state && !state.success && (
-                <div style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 10,
-                  padding: '10px 14px',
-                  borderRadius: 8,
-                  backgroundColor: '#FEF2F2',
-                  border: '1px solid #FECACA',
-                  color: '#991B1B',
-                  fontSize: 13,
-                }}>
-                  <AlertCircle style={{ width: 15, height: 15, marginTop: 1, flexShrink: 0 }} />
-                  <span>{state.error}</span>
+                <div className="flex items-start gap-3 p-4 rounded-2xl border text-sm animate-scale-in"
+                  style={{ background: '#FEF2F2', borderColor: '#FECACA', color: '#991B1B' }}>
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#DC2626' }} />
+                  <span className="font-medium leading-relaxed">{state.error}</span>
                 </div>
               )}
 
-              {/* Nomor HP field */}
-              <div>
-                <label
-                  htmlFor="nomor_hp"
-                  style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}
-                >
-                  Nomor HP
+              <div className="space-y-2">
+                <label htmlFor="nomor_hp" className="block text-sm font-bold" style={{ color: '#2D5A2D' }}>
+                  Nomor HP WhatsApp
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <Phone style={{
-                    position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-                    width: 15, height: 15, color: '#9CA3AF',
-                  }} />
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Phone className="h-5 w-5 transition-colors" style={{ color: '#6B8B6B' }} />
+                  </div>
                   <input
                     id="nomor_hp"
                     name="nomor_hp"
@@ -432,72 +296,51 @@ export default function LoginOrtuPage() {
                     inputMode="numeric"
                     autoComplete="tel"
                     required
-                    placeholder="08xxxxxxxxxx"
+                    placeholder="Contoh: 081234567890"
                     pattern="[0-9]{10,15}"
-                    className="focus-input-ortu"
+                    className="block w-full pl-11 pr-4 py-3.5 text-sm font-medium rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2"
                     style={{
-                      width: '100%',
-                      paddingLeft: 38,
-                      paddingRight: 14,
-                      paddingTop: 10,
-                      paddingBottom: 10,
-                      borderRadius: 8,
-                      border: '1px solid #E5E7EB',
-                      backgroundColor: '#F9FAFB',
-                      color: '#111827',
-                      fontSize: 14,
-                      transition: 'border-color 0.2s, box-shadow 0.2s',
+                      background: '#F7F7E8',
+                      border: '1.5px solid #D4E8D4',
+                      color: '#1C3B1C',
                     }}
+                    onFocus={e => { e.target.style.borderColor = '#228B22'; e.target.style.background = '#FFFFFF' }}
+                    onBlur={e => { e.target.style.borderColor = '#D4E8D4'; e.target.style.background = '#F7F7E8' }}
                   />
                 </div>
-                {/* Hint */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5 }}>
-                  <Info style={{ width: 11, height: 11, color: '#9CA3AF', flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: '#9CA3AF' }}>
-                    Ketik angka saja, tanpa spasi atau tanda +
-                  </span>
+                <div className="flex items-center gap-1.5 mt-1.5 px-1">
+                  <Info className="w-3.5 h-3.5" style={{ color: '#6B8B6B' }} />
+                  <span className="text-xs font-medium" style={{ color: '#6B8B6B' }}>Gunakan angka saja, tanpa spasi atau +62</span>
                 </div>
               </div>
 
-              <SubmitButton />
+              <div className="pt-1">
+                <SubmitButton />
+              </div>
             </form>
 
-            {/* Info box */}
-            <div style={{
-              marginTop: 16,
-              padding: '10px 14px',
-              borderRadius: 8,
-              backgroundColor: '#ECFDF5',
-              border: '1px solid #A7F3D0',
-            }}>
-              <p style={{ fontSize: 12, color: '#065F46', margin: 0, lineHeight: 1.5 }}>
-                <strong>Pertama kali masuk?</strong> Password Anda diatur otomatis oleh sistem.
-                Hubungi Staff TU jika mengalami kesulitan.
+            {/* Info Box */}
+            <div className="mt-6 p-4 rounded-2xl border" style={{ background: '#F0F7F0', borderColor: '#C8DFC8' }}>
+              <p className="text-xs leading-relaxed font-medium" style={{ color: '#2D5A2D' }}>
+                <span className="font-bold">Pertama kali masuk?</span> Password Anda diatur otomatis oleh sistem. Hubungi Staff TU jika mengalami kesulitan login.
               </p>
             </div>
 
-            {/* Divider + link staff */}
-            <div style={{
-              marginTop: 20, paddingTop: 16, borderTop: '1px solid #E5E7EB',
-              textAlign: 'center',
-            }}>
-              <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>
+            {/* Switch Role */}
+            <div className="mt-6 pt-5 text-center" style={{ borderTop: '1px solid #E8F0E8' }}>
+              <p className="text-sm font-medium" style={{ color: '#6B8B6B' }}>
                 Staff Sekolah?{' '}
-                <Link
-                  href="/login/staff"
-                  className="link-ortu-emerald"
-                  style={{ color: '#10B981', fontWeight: 600, textDecoration: 'none' }}
-                >
-                  Login sebagai Staff (TU/Koordinator/Pengampu/Kepsek)
+                <Link href="/login/staff" className="font-bold inline-flex items-center gap-1 group transition-opacity hover:opacity-80" style={{ color: '#228B22' }}>
+                  Login Staff
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
               </p>
             </div>
           </div>
 
-          {/* Footer tahun — client-only */}
           <FooterYearCenter />
         </div>
       </div>
-    </>
+    </div>
   )
 }
