@@ -1,6 +1,6 @@
 export type Role = 'tu' | 'koordinator' | 'pengampu' | 'kepsek'
 export type Grade = 'tahsin' | 'takmil' | 'tahfiz'
-export type TipeSetoran = 'sabak' | 'sabki' | 'manzil'
+export type TipeSetoran = 'sabak' | 'sabki' | 'manzil' | 'murojaah'
 export type StatusSetoran = 'lulus' | 'mengulang'
 export type StatusTikrar = 'wajib_sekolah' | 'selesai_sekolah' | 'wajib_rumah' | 'selesai_rumah'
 export type StatusAbsensi = 'alpha' | 'sakit' | 'izin'

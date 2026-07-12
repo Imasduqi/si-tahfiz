@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import { Halaqah, Santri, Setoran, Absensi, Uas, UasDetail, Akhlaq, SyahrulQuran, PekanMurajaah, Konfigurasi, TargetGrade } from '@/types'
+import type { TipeSetoran } from '@/types/database'
 
 // Minimal shape required for target_murajaah records (only fields used in calculation)
 type TargetMurajaahRecord = {
@@ -97,7 +98,7 @@ function getTargetMurojaah(
 function getTotalBaris(
   santriId: string,
   weekDates: string[],
-  tipe: 'sabak' | 'sabki' | 'manzil',
+  tipe: TipeSetoran,
   setoranList: Setoran[]
 ): number {
   return setoranList
@@ -129,7 +130,7 @@ interface WeekColDef {
   dates: string[]
   isSQ: boolean
   isPM: boolean
-  types: ('sabak' | 'sabki' | 'manzil')[]
+  types: TipeSetoran[]
   monthLabel: string
 }
 
@@ -225,7 +226,7 @@ export function generateRekapExcel(params: {
       if (isSQ) label += '★'
       else if (isPM) label += '◆'
       
-      const types: ('sabak' | 'sabki' | 'manzil')[] = isSQ ? ['sabak'] : ['sabak', 'sabki', 'manzil']
+      const types: TipeSetoran[] = isSQ ? ['sabak'] : ['sabak', 'sabki', 'manzil']
       
       weekDefs.push({
         label,
