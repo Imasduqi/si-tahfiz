@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Modal } from '@/components/ui/modal'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,7 @@ import { formatDate } from '@/lib/utils'
 import { BeritaLogin } from '@/types'
 
 export default function TuSistemBeritaPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // State
   const [beritaList, setBeritaList] = useState<BeritaLogin[]>([])

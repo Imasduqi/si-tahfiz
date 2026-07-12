@@ -20,9 +20,6 @@ export async function createUserAction(data: {
     const supabase = await createClient()
     const adminSupabase = await createAdminClient()
 
-    // Log: verify service role key is loaded
-    console.log('[createUser] Service role key prefix:', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20))
-
     // 1. Authenticate and authorize caller
     console.log('[createUser] Step 1: Authenticating caller...')
     const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser()
@@ -208,6 +205,16 @@ export async function updateUserAction(data: {
       return { success: false, error: 'Sesi Anda telah berakhir. Silakan login kembali.' }
     }
 
+    const { data: callerProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', currentUser.id)
+      .single()
+
+    if (callerProfile?.role !== 'tu') {
+      return { success: false, error: 'Tidak memiliki izin untuk melakukan aksi ini' }
+    }
+
     // 2. Perform update on corresponding table — use adminSupabase to bypass RLS
     if (data.role === 'orang_tua') {
       const { error } = await adminSupabase
@@ -246,6 +253,16 @@ export async function resetPasswordAction(data: {
       return { success: false, error: 'Sesi Anda telah berakhir. Silakan login kembali.' }
     }
 
+    const { data: callerProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', currentUser.id)
+      .single()
+
+    if (callerProfile?.role !== 'tu') {
+      return { success: false, error: 'Tidak memiliki izin untuk melakukan aksi ini' }
+    }
+
     if (data.password_baru.length < 8) {
       return { success: false, error: 'Password baru minimal 8 karakter.' }
     }
@@ -277,6 +294,16 @@ export async function deleteUserAction(data: {
     const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser()
     if (authError || !currentUser) {
       return { success: false, error: 'Sesi Anda telah berakhir. Silakan login kembali.' }
+    }
+
+    const { data: callerProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', currentUser.id)
+      .single()
+
+    if (callerProfile?.role !== 'tu') {
+      return { success: false, error: 'Tidak memiliki izin untuk melakukan aksi ini' }
     }
 
     // Check if deleting self to prevent locking out the admin

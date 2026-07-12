@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { Profile, OrangTua } from '@/types'
@@ -9,7 +9,7 @@ import { Profile, OrangTua } from '@/types'
 // Type
 // ─────────────────────────────────────────────
 
-export type UserRole = 'tu' | 'koordinator' | 'pengampu' | 'kepsek' | 'ortu' | null
+export type UserRole = 'tu' | 'koordinator' | 'pengampu' | 'kepsek' | 'orang_tua' | null
 
 export interface UseUserReturn {
   user: User | null
@@ -30,7 +30,7 @@ export function useUser(): UseUserReturn {
   const [role, setRole]         = useState<UserRole>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   async function fetchProfile(currentUser: User) {
     // Coba ambil dari tabel profiles (user internal)
@@ -38,7 +38,7 @@ export function useUser(): UseUserReturn {
       .from('profiles')
       .select('*')
       .eq('id', currentUser.id)
-      .single()
+      .maybeSingle()
 
     if (!profileError && profileData) {
       setProfile(profileData as Profile)
@@ -52,12 +52,12 @@ export function useUser(): UseUserReturn {
       .from('orang_tua')
       .select('*')
       .eq('id', currentUser.id)
-      .single()
+      .maybeSingle()
 
     if (!ortError && ortData) {
       setOrangTua(ortData as OrangTua)
       setProfile(null)
-      setRole('ortu')
+      setRole('orang_tua')
       return
     }
 

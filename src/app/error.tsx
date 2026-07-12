@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect } from 'react'
+
 export default function Error({
   error,
   reset,
@@ -7,13 +9,17 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    console.error('Application error:', error)
+  }, [error])
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#0f0c29] text-white px-4">
       <div className="text-center space-y-4 max-w-md">
         <div className="text-6xl font-bold text-red-400">500</div>
         <h2 className="text-xl font-semibold">Terjadi Kesalahan</h2>
         <p className="text-white/60 text-sm">
-          {error.message || 'Sesuatu yang tidak terduga terjadi. Silakan coba lagi.'}
+          Mohon maaf, terjadi kesalahan pada sistem. Silakan coba lagi atau hubungi admin jika masalah berlanjut.
         </p>
         <button
           onClick={reset}

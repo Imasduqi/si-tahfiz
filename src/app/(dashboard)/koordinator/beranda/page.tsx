@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSkeleton, SkeletonCard, SkeletonTable } from '@/components/ui/loading-skeleton'
-import { formatDate } from '@/lib/utils'
+import { formatDate, getTodayString } from '@/lib/utils'
 import { Landmark, Users, ClipboardCheck, Megaphone, Calendar, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -26,7 +26,7 @@ interface HalaqahWithDetails {
 }
 
 export default function KoordinatorBerandaPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, profile, isLoading: userLoading } = useUser()
 
   const [totalHalaqah, setTotalHalaqah] = useState<number>(0)
@@ -42,7 +42,7 @@ export default function KoordinatorBerandaPage() {
     if (!currentUser) return
     setIsDataLoading(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getTodayString()
 
       // Fetch all in parallel
       const [
@@ -138,7 +138,7 @@ export default function KoordinatorBerandaPage() {
       {(syahrulAktif || pekanAktif) && (
         <div className="space-y-4">
           {syahrulAktif && (
-            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 text-amber-850 rounded-lg shadow-sm">
+            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg shadow-sm">
               <Megaphone className="w-5 h-5 text-amber-600 flex-shrink-0 animate-bounce" />
               <div className="text-sm font-medium">
                 Syahrul Quran sedang berlangsung ({formatDate(syahrulAktif.tanggal_mulai)} - {formatDate(syahrulAktif.tanggal_selesai)})
@@ -146,7 +146,7 @@ export default function KoordinatorBerandaPage() {
             </div>
           )}
           {pekanAktif && (
-            <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 text-blue-850 rounded-lg shadow-sm">
+            <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg shadow-sm">
               <Calendar className="w-5 h-5 text-blue-600 flex-shrink-0" />
               <div className="text-sm font-medium">
                 Pekan Murajaah sedang berlangsung ({formatDate(pekanAktif.tanggal_mulai)} - {formatDate(pekanAktif.tanggal_selesai)})

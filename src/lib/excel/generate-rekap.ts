@@ -1,6 +1,13 @@
 import * as XLSX from 'xlsx'
 import { Halaqah, Santri, Setoran, Absensi, Uas, UasDetail, Akhlaq, SyahrulQuran, PekanMurajaah, Konfigurasi, TargetGrade } from '@/types'
 
+// Minimal shape required for target_murajaah records (only fields used in calculation)
+type TargetMurajaahRecord = {
+  pekan_murajaah_id: string
+  halaqah_id: string
+  target_baris_per_hari: number
+}
+
 // Helper to parse dates without timezone shifts
 function parseLocalDate(dateStr: string): Date {
   const [year, month, day] = dateStr.split('-').map(Number)
@@ -65,6 +72,27 @@ function isPekanMurajaah(date: string, pekanList: PekanMurajaah[]): boolean {
   return pekanList.some(p => date >= p.tanggal_mulai && date <= p.tanggal_selesai)
 }
 
+// Check if a date falls within any Pekan Murajaah period, return the period id if so
+function getPekanMurajaahForDate(
+  date: string,
+  pekanList: PekanMurajaah[]
+): string | null {
+  const found = pekanList.find(p => date >= p.tanggal_mulai && date <= p.tanggal_selesai)
+  return found?.id ?? null
+}
+
+// Get the target for a specific halaqah during a specific Pekan Murajaah period
+function getTargetMurojaah(
+  pekanMurajaahId: string,
+  halaqahId: string,
+  targetList: TargetMurajaahRecord[]
+): number | null {
+  const found = targetList.find(
+    t => t.pekan_murajaah_id === pekanMurajaahId && t.halaqah_id === halaqahId
+  )
+  return found?.target_baris_per_hari ?? null
+}
+
 // Calculate total baris for a santri in a specific week and tipe
 function getTotalBaris(
   santriId: string,
@@ -76,6 +104,21 @@ function getTotalBaris(
     .filter(s =>
       s.santri_id === santriId &&
       s.tipe === tipe &&
+      weekDates.includes(s.tanggal)
+    )
+    .reduce((sum, s) => sum + s.jumlah_baris, 0)
+}
+
+// Calculate total murojaah baris for a santri in a specific week
+function getTotalBarisMurojaah(
+  santriId: string,
+  weekDates: string[],
+  setoranList: Setoran[]
+): number {
+  return setoranList
+    .filter(s =>
+      s.santri_id === santriId &&
+      s.tipe === 'murojaah' &&
       weekDates.includes(s.tanggal)
     )
     .reduce((sum, s) => sum + s.jumlah_baris, 0)
@@ -114,6 +157,7 @@ export function generateRekapExcel(params: {
   semester: 'ganjil' | 'genap'
   tahunAjaran: string
   targetGradeList?: TargetGrade[]
+  targetMurajaahList?: TargetMurajaahRecord[]
 }): XLSX.WorkBook {
   const {
     halaqahList,
@@ -128,7 +172,8 @@ export function generateRekapExcel(params: {
     konfigurasi,
     semester,
     tahunAjaran,
-    targetGradeList
+    targetGradeList,
+    targetMurajaahList = []
   } = params
 
   const wb = XLSX.utils.book_new()
@@ -143,9 +188,19 @@ export function generateRekapExcel(params: {
     return wb
   }
 
+  // Build lookup: targetMap[grade][tipe_setoran] = { target_min, target_max }
+  const targetMap: Record<string, Record<string, { target_min: number; target_max: number | null }>> = {}
+  targetGradeList?.forEach(t => {
+    if (!targetMap[t.grade]) targetMap[t.grade] = {}
+    targetMap[t.grade][t.tipe_setoran] = { target_min: t.target_min, target_max: t.target_max }
+  })
+
   const hariLiburDates = hariLiburList.map(h => h.tanggal)
   const hariEfektifAll = getHariEfektif(targetTanggalMulai, tanggalSelesai, hariLiburDates)
   const hariEfektifNonSQ = hariEfektifAll.filter(d => !isSyahrulQuran(d, syahrulList))
+
+  // Separate murojaah setoran from the combined setoranList
+  const setoranMurojaahList = setoranList.filter(s => s.tipe === 'murojaah')
 
   const weeksList = groupByWeek(hariEfektifAll)
 
@@ -189,32 +244,98 @@ export function generateRekapExcel(params: {
     
     // Sort santri by name initially, then we will calculate scores and rank
     const santriCalculations = santriInHalaqah.map(santri => {
-      // 1. Setoran
+      // 1. Setoran — Sabak+Sabki blended via day-by-day calculation
+      // This correctly handles Pekan Murajaah days where murojaah replaces sabak/sabki.
+      const santriGrade = santri.grade
+      const targetSabak = targetMap[santriGrade]?.['sabak']?.target_min ?? 1
+      const targetSabki = targetMap[santriGrade]?.['sabki']?.target_min ?? 1
+
+      // Warning if target data is missing
+      if (!targetMap[santriGrade]) {
+        console.warn(`Warning: Target grade data missing for grade: ${santriGrade}`)
+      } else {
+        if (!targetMap[santriGrade]['sabak']) console.warn(`Warning: Sabak target missing for grade: ${santriGrade}`)
+        if (!targetMap[santriGrade]['sabki']) console.warn(`Warning: Sabki target missing for grade: ${santriGrade}`)
+        if (!targetMap[santriGrade]['manzil']) console.warn(`Warning: Manzil target missing for grade: ${santriGrade}`)
+      }
+
+      // --- Day-by-day blended Sabak+Sabki calculation (accounts for Pekan Murajaah) ---
+      let totalNilaiHarianSabakSabki = 0
+      let jumlahHariDihitung = 0
+
+      for (const tanggal of hariEfektifNonSQ) {
+        const pekanMurajaahId = getPekanMurajaahForDate(tanggal, pekanList)
+
+        if (pekanMurajaahId) {
+          // This day is within Pekan Murajaah — use Murojaah data instead of Sabak/Sabki
+          const targetHariIni = getTargetMurojaah(pekanMurajaahId, santri.halaqah_id, targetMurajaahList)
+
+          if (targetHariIni === null) {
+            // No target set for this halaqah on this period — skip entirely (not penalized as 0)
+            continue
+          }
+
+          const setoranHariIni = setoranMurojaahList.find(
+            s => s.santri_id === santri.id && s.tanggal === tanggal
+          )
+          const barisAktual = setoranHariIni?.jumlah_baris ?? 0
+
+          // Meet or exceed target => 100%, otherwise proportional
+          const nilaiHariIni = barisAktual >= targetHariIni
+            ? 100
+            : Math.min(100, (barisAktual / targetHariIni) * 100)
+
+          totalNilaiHarianSabakSabki += nilaiHariIni
+          jumlahHariDihitung += 1
+
+        } else {
+          // Normal day — use existing per-day Sabak+Sabki proportional logic
+          const barisSabakHariIni = setoranList
+            .filter(s => s.santri_id === santri.id && s.tipe === 'sabak' && s.tanggal === tanggal)
+            .reduce((sum, s) => sum + s.jumlah_baris, 0)
+          const barisSabkiHariIni = setoranList
+            .filter(s => s.santri_id === santri.id && s.tipe === 'sabki' && s.tanggal === tanggal)
+            .reduce((sum, s) => sum + s.jumlah_baris, 0)
+
+          const nilaiSabakHariIni = Math.min(100, (barisSabakHariIni / targetSabak) * 100)
+          const nilaiSabkiHariIni = Math.min(100, (barisSabkiHariIni / targetSabki) * 100)
+
+          // Average of Sabak and Sabki for this single day — comparable in scale with Murojaah day
+          totalNilaiHarianSabakSabki += (nilaiSabakHariIni + nilaiSabkiHariIni) / 2
+          jumlahHariDihitung += 1
+        }
+      }
+
+      const nilaiSabakSabkiGabungan = jumlahHariDihitung > 0
+        ? totalNilaiHarianSabakSabki / jumlahHariDihitung
+        : 0
+
+      // --- Manzil: semester-total approach, excluding Syahrul Quran days (Fase 32) ---
+      // Only sum manzil setoran that fall on non-Syahrul Quran effective days
+      const totalManzil = setoranList
+        .filter(s =>
+          s.santri_id === santri.id &&
+          s.tipe === 'manzil' &&
+          hariEfektifNonSQ.includes(s.tanggal)
+        )
+        .reduce((sum, s) => sum + s.jumlah_baris, 0)
+
+      const targetManzil = targetMap[santriGrade]?.['manzil']?.target_min ?? 1
+      // Target denominator already uses hariEfektifNonSQ (excludes SQ days)
+      const totalTargetManzil = hariEfektifNonSQ.length * targetManzil
+      const nilaiManzil = totalTargetManzil > 0 ? Math.min(100, (totalManzil / totalTargetManzil) * 100) : 0
+
+      // --- Combined Nilai Setoran: 60% Sabak+Sabki (blended) + 40% Manzil ---
+      const nilaiSetoran = (nilaiSabakSabkiGabungan * 0.60) + (nilaiManzil * 0.40)
+
+      // --- Totals for Excel display columns ---
       const totalSabak = setoranList
         .filter(s => s.santri_id === santri.id && s.tipe === 'sabak')
         .reduce((sum, s) => sum + s.jumlah_baris, 0)
-      
+
       const totalSabki = setoranList
         .filter(s => s.santri_id === santri.id && s.tipe === 'sabki')
         .reduce((sum, s) => sum + s.jumlah_baris, 0)
-        
-      const totalManzil = setoranList
-        .filter(s => s.santri_id === santri.id && s.tipe === 'manzil')
-        .reduce((sum, s) => sum + s.jumlah_baris, 0)
-
-      // Find target minimum
-      const targetGrade = targetGradeList?.find(tg => tg.grade === santri.grade)
-      const targetMin = targetGrade ? targetGrade.target_min : (santri.grade === 'tahfiz' ? 30 : santri.grade === 'takmil' ? 15 : 7)
-
-      const totalTargetSabak = hariEfektifAll.length * targetMin
-      const totalTargetSabki = hariEfektifNonSQ.length * targetMin
-      const totalTargetManzil = hariEfektifNonSQ.length * targetMin
-
-      const nilaiSabak = totalTargetSabak > 0 ? Math.min(100, (totalSabak / totalTargetSabak) * 100) : 0
-      const nilaiSabki = totalTargetSabki > 0 ? Math.min(100, (totalSabki / totalTargetSabki) * 100) : 0
-      const nilaiManzil = totalTargetManzil > 0 ? Math.min(100, (totalManzil / totalTargetManzil) * 100) : 0
-
-      const nilaiSetoran = (nilaiSabak * 0.30) + (nilaiSabki * 0.30) + (nilaiManzil * 0.40)
 
       // 2. Kehadiran
       const jumlahAlpha = absensiList.filter(a =>
@@ -356,12 +477,31 @@ export function generateRekapExcel(params: {
         santri.kelas
       ]
 
-      // Weekly setoran totals
+      // Weekly setoran totals — for Pekan Murajaah weeks, show murojaah baris in Sabak/Sabki cells
+      // For Syahrul Quran weeks, show '-' for all cells (data unavailable — not penalised as 0)
       weekDefs.forEach(wDef => {
-        wDef.types.forEach(type => {
-          const totalBaris = getTotalBaris(santri.id, wDef.dates, type, setoranList)
-          row.push(totalBaris)
-        })
+        if (wDef.isSQ) {
+          // Syahrul Quran week: all types display as '-' to distinguish from zero-submission
+          wDef.types.forEach(() => {
+            row.push('-')
+          })
+        } else if (wDef.isPM) {
+          // Pekan Murajaah week: show murojaah baris total in place of Sabak/Sabki cells
+          const murojaahBaris = getTotalBarisMurojaah(santri.id, wDef.dates, setoranList)
+          wDef.types.forEach(type => {
+            if (type === 'sabak' || type === 'sabki') {
+              row.push(murojaahBaris)
+            } else {
+              // manzil column still shows actual manzil data
+              row.push(getTotalBaris(santri.id, wDef.dates, type, setoranList))
+            }
+          })
+        } else {
+          wDef.types.forEach(type => {
+            const totalBaris = getTotalBaris(santri.id, wDef.dates, type, setoranList)
+            row.push(totalBaris)
+          })
+        }
       })
 
       // Add summary calculations

@@ -10,12 +10,7 @@ import {
 import { loginWithEmail } from '@/lib/actions/auth'
 import type { LoginResult } from '@/lib/actions/auth'
 
-const ROLE_HOME: Record<string, string> = {
-  tu:          '/tu/akun',
-  koordinator: '/koordinator/beranda',
-  pengampu:    '/pengampu/beranda',
-  kepsek:      '/kepsek/dashboard',
-}
+import { ROLE_HOME_PATHS } from '@/lib/constants'
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -52,7 +47,7 @@ export default function StaffLoginPage() {
 
   useEffect(() => {
     if (state?.success && state.role) {
-      const destination = ROLE_HOME[state.role] ?? '/login'
+      const destination = ROLE_HOME_PATHS[state.role] ?? '/login'
       router.replace(destination)
     }
   }, [state, router])

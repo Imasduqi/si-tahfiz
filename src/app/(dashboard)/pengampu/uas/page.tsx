@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import { LoadingSkeleton, SkeletonTable } from '@/components/ui/loading-skeleton
 import { toast } from 'sonner'
 import { Info, Edit3 } from 'lucide-react'
 import { Santri, Halaqah, Konfigurasi, Uas, UasDetail } from '@/types'
+import { getTodayString } from '@/lib/utils'
 
 interface UasWithDetails extends Uas {
   uas_detail: UasDetail[]
@@ -22,8 +23,21 @@ interface SantriWithUas extends Santri {
   uasRecord?: UasWithDetails
 }
 
+function getCurrentTahunAjaran(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() + 1 // 1-12
+
+  // Academic year starts in July (month 7)
+  if (month >= 7) {
+    return `${year}/${year + 1}`
+  } else {
+    return `${year - 1}/${year}`
+  }
+}
+
 export default function PengampuUasPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   const [halaqah, setHalaqah] = useState<Halaqah | null>(null)
@@ -32,7 +46,7 @@ export default function PengampuUasPage() {
 
   // Semester and Year configuration
   const [selectedSemester, setSelectedSemester] = useState<'ganjil' | 'genap'>('ganjil')
-  const [selectedTahunAjaran, setSelectedTahunAjaran] = useState('2025/2026')
+  const [selectedTahunAjaran, setSelectedTahunAjaran] = useState(getCurrentTahunAjaran())
   const [availableYears, setAvailableYears] = useState<string[]>([])
 
   // Modal States
@@ -62,7 +76,7 @@ export default function PengampuUasPage() {
   // Resolve current semester & school year from konfigurasi or fallback
   const resolveCurrentSemesterAndYear = (config: Konfigurasi | null) => {
     const now = new Date()
-    const todayStr = now.toISOString().split('T')[0]
+    const todayStr = getTodayString()
     const currentYear = now.getFullYear()
 
     if (config) {
@@ -293,26 +307,21 @@ export default function PengampuUasPage() {
 
       if (headerError) throw headerError
 
-      // 2. Clear old detail rows to avoid orphaned entries (e.g. if count decreased)
-      const { error: deleteError } = await supabase
-        .from('uas_detail')
-        .delete()
-        .eq('uas_id', uasRecord.id)
-
-      if (deleteError) throw deleteError
-
-      // 3. Insert new detail rows
+      // 2 & 3. Replace old detail rows atomically via RPC
       const insertRows = juzDetails.map(d => ({
-        uas_id: uasRecord.id,
         nomor_juz: parseInt(d.nomorJuz),
         nilai: parseInt(d.nilai)
       }))
 
-      const { error: insertError } = await supabase
-        .from('uas_detail')
-        .insert(insertRows)
+      const { error: rpcError } = await supabase.rpc('replace_uas_detail', {
+        p_uas_id: uasRecord.id,
+        p_details: insertRows
+      })
 
-      if (insertError) throw insertError
+      if (rpcError) {
+        toast.error('Gagal menyimpan detail UAS: ' + rpcError.message)
+        return // stop here — the RPC function guarantees old data is preserved if this failed
+      }
 
       // 4. Calculate and Update Nilai Akhir
       const allFilled = juzDetails.every(d => d.nilai !== '')

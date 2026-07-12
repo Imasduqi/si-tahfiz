@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,7 @@ interface SyahrulQuranPeriod {
 }
 
 export default function KoordinatorKelolaSyahrulQuranPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   // Data States
@@ -147,7 +147,16 @@ export default function KoordinatorKelolaSyahrulQuranPage() {
           dibuat_oleh: currentUser.id
         })
 
-      if (insertError) throw insertError
+      if (insertError) {
+        // Postgres exclusion constraint violation code
+        if (insertError.code === '23P01') {
+          toast.error('Periode ini bertumpang tindih dengan periode Syahrul Quran lain yang sudah ada')
+        } else {
+          toast.error('Gagal membuat periode: ' + insertError.message)
+        }
+        setIsSubmitting(false)
+        return
+      }
 
       toast.success('Periode Syahrul Quran berhasil ditetapkan')
       setIsCreateModalOpen(false)

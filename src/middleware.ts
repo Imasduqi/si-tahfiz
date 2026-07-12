@@ -7,14 +7,7 @@ import { createServerClient } from '@supabase/ssr'
 
 const PUBLIC_ROUTES = ['/login', '/login/ortu', '/login/staff', '/maintenance']
 
-/** Halaman beranda per-role setelah login */
-const ROLE_HOME: Record<string, string> = {
-  tu:          '/tu/akun',
-  koordinator: '/koordinator/beranda',
-  pengampu:    '/pengampu/beranda',
-  kepsek:      '/kepsek/dashboard',
-  ortu:        '/ortu/beranda',
-}
+import { ROLE_HOME_PATHS } from '@/lib/constants'
 
 /** Prefix route yang boleh diakses per-role */
 const ROLE_PREFIX: Record<string, string> = {
@@ -22,7 +15,7 @@ const ROLE_PREFIX: Record<string, string> = {
   koordinator: '/koordinator',
   pengampu:    '/pengampu',
   kepsek:      '/kepsek',
-  ortu:        '/ortu',
+  orang_tua:   '/ortu',
 }
 
 // ─────────────────────────────────────────────
@@ -33,15 +26,6 @@ function url(path: string, req: NextRequest): URL {
   return new URL(path, req.url)
 }
 
-/** Buat Supabase client dengan service role key — bypass RLS, aman untuk middleware */
-function createServiceClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    // Middleware berjalan di Edge — tidak perlu cookie handling untuk client ini
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  )
-}
 
 // ─────────────────────────────────────────────
 // Middleware utama
@@ -83,13 +67,13 @@ export async function middleware(request: NextRequest) {
 
   // ── Aturan: jika sudah login dan mengakses /login/staff (bukan /login) ──
   // Orang tua yang salah buka /login/staff → redirect ke /login
-  if (pathname === '/login/staff' && user && roleCookie === 'ortu') {
+  if (pathname === '/login/staff' && user && roleCookie === 'orang_tua') {
     return NextResponse.redirect(url('/login', request))
   }
 
   // ── Aturan: jika sudah login dan mengakses halaman login → redirect ke beranda ──
   if ((pathname === '/login' || pathname === '/login/ortu' || pathname === '/login/staff') && user && roleCookie) {
-    const home = ROLE_HOME[roleCookie] ?? '/login'
+    const home = ROLE_HOME_PATHS[roleCookie] ?? '/login'
     return NextResponse.redirect(url(home, request))
   }
 
@@ -103,25 +87,31 @@ export async function middleware(request: NextRequest) {
 
   // ── Aturan: protected route tapi tidak login → redirect ke /login ──
   if (!user || !roleCookie) {
-    const loginPath = pathname.startsWith('/ortu') ? '/login' : '/login'
+    const loginPath = pathname.startsWith('/ortu') ? '/login' : '/login/staff'
     return NextResponse.redirect(url(loginPath, request))
   }
 
-  // ── Aturan: cek maintenance mode (service role key — bypass RLS) ──
+  // ── Aturan: cek maintenance mode (anon key — publicly readable via RLS) ──
   // Hanya jalankan untuk user non-TU agar TU tetap bisa akses
   if (roleCookie !== 'tu' && !pathname.startsWith('/maintenance')) {
+    let maintenanceMode = false
+    let maintenanceCheckFailed = false
+
     try {
-      const serviceClient = createServiceClient()
-      const { data: config } = await serviceClient
+      const { data: config, error } = await supabase
         .from('konfigurasi')
         .select('maintenance_mode')
         .single()
-
-      if (config?.maintenance_mode === true) {
-        return NextResponse.redirect(url('/maintenance', request))
-      }
+      
+      if (error) throw error
+      maintenanceMode = config?.maintenance_mode ?? false
     } catch {
-      // Jika gagal query, biarkan akses berlanjut (fail-open)
+      maintenanceCheckFailed = true
+    }
+
+    // Fail-closed: if we couldn't verify the status, treat as maintenance active
+    if (maintenanceMode || maintenanceCheckFailed) {
+      return NextResponse.redirect(url('/maintenance', request))
     }
   }
 
@@ -135,7 +125,7 @@ export async function middleware(request: NextRequest) {
 
   if (!pathname.startsWith(allowedPrefix)) {
     // User mengakses route yang bukan miliknya → redirect ke berandanya sendiri
-    const home = ROLE_HOME[roleCookie] ?? '/login'
+    const home = ROLE_HOME_PATHS[roleCookie] ?? '/login'
     return NextResponse.redirect(url(home, request))
   }
 

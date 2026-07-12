@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Card } from '@/components/ui/card'
@@ -16,7 +16,7 @@ import { RefreshCw, CheckCircle, ChevronDown, ChevronUp, Clock, Info } from 'luc
 import { Santri, Tikrar } from '@/types'
 
 export default function OrtuTikrarPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   // Children & Selected Child States

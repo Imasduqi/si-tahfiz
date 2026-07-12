@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Card } from '@/components/ui/card'
@@ -23,7 +23,7 @@ type RiwayatManzil = Pick<
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function OrtuManzilPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   // ── Children & selection ─────────────────────────────────────────────────

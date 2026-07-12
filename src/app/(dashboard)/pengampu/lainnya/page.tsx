@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
@@ -11,7 +11,7 @@ export default function PengampuLainnyaPage() {
   const [isAkhlaqActive, setIsAkhlaqActive] = useState<boolean | null>(null)
 
   useEffect(() => {
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
     async function fetchConfig() {
       try {
         const { data, error } = await supabase

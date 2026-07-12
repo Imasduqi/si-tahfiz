@@ -2,19 +2,15 @@ import React from 'react'
 import Link from 'next/link'
 import { UserCircle } from 'lucide-react'
 
-const ROLE_HOME_PATHS: Record<string, string> = {
-  tu:          '/tu/akun',
-  koordinator: '/koordinator/beranda',
-  pengampu:    '/pengampu/beranda',
-  ortu:        '/ortu/beranda',
-  kepsek:      '/kepsek/dashboard',
-}
+import { ROLE_HOME_PATHS } from '@/lib/constants'
 
 export interface TopbarProps {
-  role: 'tu' | 'koordinator' | 'pengampu' | 'ortu' | 'kepsek'
+  role: 'tu' | 'koordinator' | 'pengampu' | 'orang_tua' | 'kepsek'
 }
 
 export function Topbar({ role }: TopbarProps) {
+  const basePath = role === 'orang_tua' ? 'ortu' : role;
+
   return (
     <header
       className="sticky top-0 z-40 w-full h-[56px] md:h-[64px] px-4 md:px-6 flex items-center justify-between"
@@ -39,18 +35,10 @@ export function Topbar({ role }: TopbarProps) {
 
       {/* Profile Link */}
       <Link
-        href={`/${role}/profil`}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 group"
+        href={`/${basePath}/profil`}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 group hover:bg-[#228B22] hover:text-[#FFFFFF]"
         style={{ background: '#F0F7F0', borderColor: '#C8DFC8', color: '#4A6B4A' }}
         aria-label="Profil"
-        onMouseEnter={e => {
-          (e.currentTarget as HTMLElement).style.background = '#228B22'
-          ;(e.currentTarget as HTMLElement).style.color = '#FFFFFF'
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLElement).style.background = '#F0F7F0'
-          ;(e.currentTarget as HTMLElement).style.color = '#4A6B4A'
-        }}
       >
         <UserCircle className="w-5 h-5" />
         <span className="text-xs font-semibold hidden sm:block">Profil</span>

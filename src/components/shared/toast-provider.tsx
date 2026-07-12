@@ -7,10 +7,11 @@ export function ToastProvider() {
     <Toaster
       position="top-right"
       toastOptions={{
-        style: {
-          background: '#ECFDF5',
-          color: '#065F46',
-          border: '1px solid #A7F3D0'
+        classNames: {
+          success: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+          error: 'bg-red-50 text-red-800 border border-red-200',
+          warning: 'bg-amber-50 text-amber-800 border border-amber-200',
+          info: 'bg-blue-50 text-blue-800 border border-blue-200',
         }
       }}
     />

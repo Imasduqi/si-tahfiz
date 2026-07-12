@@ -45,15 +45,10 @@ async function getRoleCookie(): Promise<string | null> {
 // Redirect berdasarkan role
 // ─────────────────────────────────────────────
 
+import { ROLE_HOME_PATHS } from '@/lib/constants'
+
 function getRoleHomePath(role: string): string {
-  switch (role) {
-    case 'tu':          return '/tu/akun'
-    case 'koordinator': return '/koordinator/beranda'
-    case 'pengampu':    return '/pengampu/beranda'
-    case 'kepsek':      return '/kepsek/dashboard'
-    case 'ortu':        return '/ortu/beranda'
-    default:            return '/login'
-  }
+  return ROLE_HOME_PATHS[role] ?? '/login'
 }
 
 // ─────────────────────────────────────────────
@@ -65,7 +60,7 @@ export async function loginWithEmail(
   formData: FormData
 ): Promise<LoginResult> {
   const email    = (formData.get('email') as string)?.trim()
-  const password = (formData.get('password') as string)?.trim()
+  const password = formData.get('password') as string
 
   // Validasi field kosong
   if (!email || !password) {
@@ -75,36 +70,25 @@ export async function loginWithEmail(
   const supabase = await createClient()
 
   // ── STEP 1 ──────────────────────────────────
-  console.log('1. Mencoba signInWithPassword...', { email })
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  console.log('2. Result:', {
-    user: data?.user ? { id: data.user.id, email: data.user.email, confirmed: data.user.confirmed_at } : null,
-    session: data?.session ? 'OK' : null,
-    error,
-  })
 
   if (error) {
-    console.log('3. Error detail:', error.message, error.status)
-    return { success: false, error: 'Email atau password salah.' }
+    return { success: false, error: 'Email/Nomor HP atau password salah' }
   }
 
   // ── STEP 4 ──────────────────────────────────
-  console.log('4. User ID:', data.user.id)
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', data.user.id)
     .single()
-  console.log('5. Profile result:', { profile, profileError })
 
   if (profileError || !profile) {
-    console.log('6. Profile tidak ditemukan — signOut dan return error')
     await supabase.auth.signOut()
-    return { success: false, error: 'Akun tidak ditemukan. Hubungi Staff TU.' }
+    return { success: false, error: 'Email/Nomor HP atau password salah' }
   }
 
   const role = profile.role as string
-  console.log('7. Login berhasil — role:', role)
 
   // Set cookie role agar middleware bisa membacanya
   await setRoleCookie(role)
@@ -158,11 +142,25 @@ export async function loginWithPhone(
   })
 
   if (authError || !authData.user) {
-    return { success: false, error: 'Nomor HP tidak terdaftar. Hubungi Staff TU.' }
+    return { success: false, error: 'Email/Nomor HP atau password salah' }
   }
 
-  // Set cookie role = 'ortu'
-  await setRoleCookie('ortu')
+  // After successful auth, verify the orang_tua record actually exists
+  // rather than assuming role='orang_tua' just because this function was called
+  const { data: ortuProfile, error: ortuError } = await supabase
+    .from('orang_tua')
+    .select('id')
+    .eq('id', authData.user.id)
+    .maybeSingle()
+
+  if (ortuError || !ortuProfile) {
+    await supabase.auth.signOut()
+    return { success: false, error: 'Email/Nomor HP atau password salah' }
+  }
+
+  // role confirmed as 'orang_tua' via actual database check, not assumption
+  // Set cookie role = 'orang_tua'
+  await setRoleCookie('orang_tua')
 
   try {
     const { data: { user } } = await supabase.auth.getUser()
@@ -176,7 +174,7 @@ export async function loginWithPhone(
     // silently ignore — login must not fail because of audit logging
   }
 
-  return { success: true, role: 'ortu' }
+  return { success: true, role: 'orang_tua' }
 }
 
 // ─────────────────────────────────────────────
@@ -194,7 +192,7 @@ export async function logout() {
   await clearRoleCookie()
 
   // Redirect sesuai role terakhir (UC-003)
-  const destination = role === 'ortu' ? '/login/ortu' : '/login'
+  const destination = role === 'orang_tua' ? '/login/ortu' : '/login'
   redirect(destination)
 }
 

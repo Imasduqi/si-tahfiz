@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,7 @@ interface SantriWithHalaqah extends Santri {
 }
 
 export default function KoordinatorGradePage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   // Data States
@@ -41,11 +41,6 @@ export default function KoordinatorGradePage() {
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false)
   const [selectedSantri, setSelectedSantri] = useState<SantriWithHalaqah | null>(null)
   const [newGrade, setNewGrade] = useState<string>('')
-
-  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false)
-  const [selectedTargetGrade, setSelectedTargetGrade] = useState<TargetGrade | null>(null)
-  const [targetMin, setTargetMin] = useState<string>('')
-  const [targetMax, setTargetMax] = useState<string>('')
 
   const [isToggleConfirmModalOpen, setIsToggleConfirmModalOpen] = useState(false)
   const [pendingToggleValue, setPendingToggleValue] = useState<boolean>(false)
@@ -69,6 +64,8 @@ export default function KoordinatorGradePage() {
       const { data: targetData, error: targetError } = await supabase
         .from('target_grade')
         .select('*')
+        .order('tipe_setoran')
+        .order('grade')
       if (targetError) throw targetError
       setTargetGrades(targetData || [])
 
@@ -83,7 +80,7 @@ export default function KoordinatorGradePage() {
       // 4. Fetch santri list
       const { data: santriData, error: santriError } = await supabase
         .from('santri')
-        .select('id, nama_lengkap, kelas, grade, halaqah(nama_halaqah, grade)')
+        .select('id, nama_lengkap, kelas, grade, halaqah_id, halaqah(nama_halaqah, grade)')
         .order('nama_lengkap')
       if (santriError) throw santriError
       setSantriList((santriData as unknown as SantriWithHalaqah[]) || [])
@@ -108,7 +105,7 @@ export default function KoordinatorGradePage() {
     try {
       const { data: santriData, error: santriError } = await supabase
         .from('santri')
-        .select('id, nama_lengkap, kelas, grade, halaqah(nama_halaqah, grade)')
+        .select('id, nama_lengkap, kelas, grade, halaqah_id, halaqah(nama_halaqah, grade)')
         .order('nama_lengkap')
       if (santriError) throw santriError
       setSantriList((santriData as unknown as SantriWithHalaqah[]) || [])
@@ -127,12 +124,35 @@ export default function KoordinatorGradePage() {
 
   // Target limit display helper
   const getTargetText = (grade: string) => {
-    const target = targetGrades.find(tg => tg.grade === grade)
-    if (!target) return '-'
-    if (target.target_max === null || target.target_max === undefined) {
-      return `${target.target_min} baris/hari`
+    const sabak = targetGrades.find(tg => tg.grade === grade && tg.tipe_setoran === 'sabak')
+    const sabki = targetGrades.find(tg => tg.grade === grade && tg.tipe_setoran === 'sabki')
+    const manzil = targetGrades.find(tg => tg.grade === grade && tg.tipe_setoran === 'manzil')
+
+    if (!sabak && !sabki && !manzil) return '-'
+
+    const formatVal = (t?: TargetGrade) => {
+      if (!t) return '-'
+      return t.target_max !== null && t.target_max !== undefined
+        ? `${t.target_min}-${t.target_max}`
+        : `${t.target_min}`
     }
-    return `${target.target_min}-${target.target_max} baris/hari`
+
+    return (
+      <div className="flex flex-col gap-0.5 text-xs py-1">
+        <div className="flex items-center gap-1">
+          <span className="text-gray-400 font-semibold w-12">Sabak:</span>
+          <span className="font-medium text-gray-800">{formatVal(sabak)}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-gray-400 font-semibold w-12">Sabki:</span>
+          <span className="font-medium text-gray-800">{formatVal(sabki)}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-gray-400 font-semibold w-12">Manzil:</span>
+          <span className="font-medium text-gray-800">{formatVal(manzil)}</span>
+        </div>
+      </div>
+    )
   }
 
   // Ubah Grade Modal functions
@@ -162,10 +182,14 @@ export default function KoordinatorGradePage() {
 
       // Audit trail insertion
       if (currentUser) {
-        await supabase.from('audit_trail').insert({
+        const { error: auditError } = await supabase.from('audit_trail').insert({
           user_id: currentUser.id,
           aktivitas: `Mengubah grade santri ${selectedSantri.nama_lengkap} dari ${selectedSantri.grade.toUpperCase()} ke ${newGrade.toUpperCase()}`
         })
+        if (auditError) {
+          console.error('Gagal mencatat audit trail:', auditError)
+          toast.error('Aksi berhasil, namun gagal mencatat ke audit trail', { duration: 3000 })
+        }
       }
 
       toast.success('Grade santri berhasil diperbarui')
@@ -179,70 +203,7 @@ export default function KoordinatorGradePage() {
     }
   }
 
-  // Edit Target Grade Modal functions
-  const openTargetModal = (target: TargetGrade) => {
-    setSelectedTargetGrade(target)
-    setTargetMin(target.target_min.toString())
-    setTargetMax(target.target_max ? target.target_max.toString() : '')
-    setIsTargetModalOpen(true)
-  }
-
-  const handleTargetSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedTargetGrade) return
-
-    const minNum = parseInt(targetMin)
-    if (isNaN(minNum) || minNum <= 0) {
-      toast.error('Target minimal harus berupa angka positif')
-      return
-    }
-
-    let maxVal: number | null = null
-    if (targetMax.trim() !== '') {
-      const maxNum = parseInt(targetMax)
-      if (isNaN(maxNum) || maxNum < minNum) {
-        toast.error('Target maksimal harus berupa angka dan tidak boleh lebih kecil dari minimal')
-        return
-      }
-      maxVal = maxNum
-    }
-
-    setIsSubmitting(true)
-    try {
-      const { error } = await supabase
-        .from('target_grade')
-        .update({
-          target_min: minNum,
-          target_max: maxVal,
-          updated_at: new Date().toISOString()
-        })
-        .eq('grade', selectedTargetGrade.grade)
-
-      if (error) throw error
-
-      // Audit trail insertion
-      if (currentUser) {
-        await supabase.from('audit_trail').insert({
-          user_id: currentUser.id,
-          aktivitas: `Mengubah target konfigurasi grade ${selectedTargetGrade.grade.toUpperCase()}`
-        })
-      }
-
-      toast.success('Target grade berhasil diperbarui')
-      setIsTargetModalOpen(false)
-      
-      // Refresh target list
-      const { data: targetData } = await supabase
-        .from('target_grade')
-        .select('*')
-      setTargetGrades(targetData || [])
-    } catch (error) {
-      console.error('Update target grade error:', error)
-      toast.error('Gagal memperbarui target grade')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+  // Target editing is managed by Staff TU. Read-only on Koordinator dashboard.
 
   // Toggle feature functions
   const handleToggleClick = (currentState: boolean) => {
@@ -266,10 +227,14 @@ export default function KoordinatorGradePage() {
 
       // Audit trail insertion
       if (currentUser) {
-        await supabase.from('audit_trail').insert({
+        const { error: auditError } = await supabase.from('audit_trail').insert({
           user_id: currentUser.id,
           aktivitas: `${pendingToggleValue ? 'Mengaktifkan' : 'Menonaktifkan'} fitur penilaian akhlaq`
         })
+        if (auditError) {
+          console.error('Gagal mencatat audit trail:', auditError)
+          toast.error('Aksi berhasil, namun gagal mencatat ke audit trail', { duration: 3000 })
+        }
       }
 
       toast.success(`Fitur akhlaq berhasil ${pendingToggleValue ? 'diaktifkan' : 'dinonaktifkan'}`)
@@ -320,9 +285,7 @@ export default function KoordinatorGradePage() {
     {
       key: 'target',
       header: 'Target Baris/Hari',
-      render: (item) => (
-        <span className="font-medium text-gray-800">{getTargetText(item.grade)}</span>
-      ),
+      render: (item) => getTargetText(item.grade),
     },
     {
       key: 'aksi',
@@ -389,26 +352,36 @@ export default function KoordinatorGradePage() {
               <Sliders className="w-4 h-4 text-emerald-500" />
               Konfigurasi Target Grade
             </h2>
-            <div className="divide-y divide-gray-100">
-              {targetGrades.map((target) => (
-                <div key={target.id} className="py-2.5 flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <span className="text-sm font-semibold capitalize text-gray-800">{target.grade}</span>
-                    <p className="text-xs text-gray-500">
-                      Target: {target.target_max ? `${target.target_min} s/d ${target.target_max}` : `${target.target_min}`} baris per hari
-                    </p>
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4 flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-700 font-medium">
+                Target dapat diubah oleh Staff TU di menu Konfigurasi.
+              </p>
+            </div>
+            <div className="space-y-4">
+              {['sabak', 'sabki', 'manzil'].map((tipe) => {
+                const list = targetGrades.filter((t) => t.tipe_setoran === tipe)
+                return (
+                  <div key={tipe} className="space-y-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 border-b pb-1">
+                      {tipe === 'sabak' ? 'Sabaq' : tipe === 'sabki' ? 'Sabqi' : 'Manzil'}
+                    </h3>
+                    <div className="grid grid-cols-3 gap-2">
+                      {list.map((target) => (
+                        <div key={target.id} className="bg-gray-50 rounded-lg p-2 border border-gray-100 text-center">
+                          <span className="text-xs font-semibold capitalize text-gray-700 block mb-0.5">{target.grade}</span>
+                          <span className="text-[11px] text-gray-500 font-medium">
+                            {target.target_max ? `${target.target_min}-${target.target_max}` : target.target_min} Baris
+                          </span>
+                        </div>
+                      ))}
+                      {list.length === 0 && (
+                        <span className="text-xs text-gray-400 italic">Belum ada data</span>
+                      )}
+                    </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openTargetModal(target)}
-                    className="h-8 px-2.5 text-xs flex items-center gap-1"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    Ubah
-                  </Button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
@@ -564,65 +537,6 @@ export default function KoordinatorGradePage() {
         )}
       </Modal>
 
-      {/* Edit Target Grade Modal */}
-      <Modal
-        isOpen={isTargetModalOpen}
-        onClose={() => setIsTargetModalOpen(false)}
-        title={selectedTargetGrade ? `Ubah Target Grade — ${selectedTargetGrade.grade.toUpperCase()}` : ''}
-        size="md"
-      >
-        {selectedTargetGrade && (
-          <form onSubmit={handleTargetSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label htmlFor="targetMin" className="text-xs font-semibold text-gray-700">
-                Target Minimal (baris/hari) <span className="text-red-500">*</span>
-              </label>
-              <Input
-                id="targetMin"
-                type="number"
-                min="1"
-                required
-                placeholder="Contoh: 15"
-                value={targetMin}
-                onChange={(e) => setTargetMin(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="targetMax" className="text-xs font-semibold text-gray-700">
-                Target Maksimal (baris/hari) <span className="text-gray-400">(Opsional)</span>
-              </label>
-              <Input
-                id="targetMax"
-                type="number"
-                placeholder="Biarkan kosong jika tidak ada batas maksimal"
-                value={targetMax}
-                onChange={(e) => setTargetMax(e.target.value)}
-              />
-              <p className="text-[11px] text-gray-400 leading-normal">
-                Batas maksimal hanya digunakan untuk grade tertentu seperti Tahsin.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setIsTargetModalOpen(false)}
-              >
-                Batal
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                isLoading={isSubmitting}
-              >
-                Simpan Target
-              </Button>
-            </div>
-          </form>
-        )}
-      </Modal>
 
       {/* Toggle Confirmation Modal */}
       <Modal

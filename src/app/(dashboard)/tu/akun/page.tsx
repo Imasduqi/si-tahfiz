@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState , useMemo} from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { Modal } from '@/components/ui/modal'
@@ -46,7 +46,7 @@ type ImportStep = 'upload' | 'preview' | 'result'
 
 export default function TuAkunPage() {
   console.log('[TuAkunPage] Component rendered')
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // ── Existing CRUD State ─────────────────────────────────────────────────────
   const [accounts, setAccounts] = useState<MergedAccount[]>([])

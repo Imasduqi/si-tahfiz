@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,7 @@ interface UkjWithDetails extends Ukj {
 }
 
 export default function KoordinatorUkjPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   const [ukjList, setUkjList] = useState<UkjWithDetails[]>([])
@@ -114,10 +114,14 @@ export default function KoordinatorUkjPage() {
         fetchUkjList()
       } else {
         // Insert to audit_trail
-        await supabase.from('audit_trail').insert({
+        const { error: auditError } = await supabase.from('audit_trail').insert({
           user_id: currentUser.id,
           aktivitas: `Approve UKJ: ${selectedUkj.santri?.nama_lengkap} Juz ${selectedUkj.nomor_juz}`
         })
+        if (auditError) {
+          console.error('Gagal mencatat audit trail:', auditError)
+          toast.error('Aksi berhasil, namun gagal mencatat ke audit trail', { duration: 3000 })
+        }
 
         toast.success(`Berhasil menyetujui UKJ ${selectedUkj.santri?.nama_lengkap}`)
         setIsApproveModalOpen(false)
@@ -164,10 +168,14 @@ export default function KoordinatorUkjPage() {
         fetchUkjList()
       } else {
         // Insert to audit_trail
-        await supabase.from('audit_trail').insert({
+        const { error: auditError } = await supabase.from('audit_trail').insert({
           user_id: currentUser.id,
           aktivitas: `Reject UKJ: ${selectedUkj.santri?.nama_lengkap} Juz ${selectedUkj.nomor_juz} — ${alasanPenolakan.trim()}`
         })
+        if (auditError) {
+          console.error('Gagal mencatat audit trail:', auditError)
+          toast.error('Aksi berhasil, namun gagal mencatat ke audit trail', { duration: 3000 })
+        }
 
         toast.success(`Berhasil menolak UKJ ${selectedUkj.santri?.nama_lengkap}`)
         setIsRejectModalOpen(false)

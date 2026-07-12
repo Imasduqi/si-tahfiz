@@ -1,43 +1,73 @@
-## Setup Development
+# SI-Tahfiz: Sistem Informasi Manajemen Program Tahfiz Al-Qur'an
+
+SI-Tahfiz adalah aplikasi web komprehensif yang dirancang untuk MTs TQ Jamilurrahman Yogyakarta. Sistem ini bertujuan mendigitalisasi proses manajemen hafalan Al-Qur'an secara terintegrasi, yang sebelumnya menggunakan buku catatan manual dan spreadsheet.
+
+Aplikasi ini bersifat **Mobile-First** dan mendukung 5 jenis pengguna (Role): **Staff TU, Koordinator, Pengampu, Kepala Sekolah, dan Orang Tua/Wali**.
+
+---
+
+## 🏗️ Struktur & Dokumentasi Proyek
+
+Proyek ini sangat terdokumentasi dengan baik. Seluruh *blueprint* arsitektur dan spesifikasi aplikasi berada di direktori *root* (di luar folder aplikasi utama `si-tahfiz/`). 
+
+Berikut adalah peta dokumentasi proyek:
+
+### 1. Spesifikasi Utama
+- 📄 **`srs.md`** : Software Requirements Specification. Dokumen utama yang memuat aturan bisnis inti, penjabaran kewenangan per *role*, dan definisi fitur secara *high-level*.
+- 📄 **`information_architecture.md`** : Peta situs (Sitemap) dan alur navigasi halaman aplikasi per *role*.
+- 📄 **`design_system.md`** : Panduan visual UI/UX (termasuk palet warna "Forest Green", tipografi `Plus Jakarta Sans`, spesifikasi *rounded corner* statis pada komponen, dan *styling* spesifik lainnya).
+
+### 2. Arsitektur Data & Alur Sistem
+- 📄 **`data_model.md`** : Dokumentasi *Database Schema* komprehensif yang mencakup 26 tabel (termasuk tabel notifikasi push), kamus data, *relationships*, dan *traceability matrix*.
+- 📂 **`user_flows/`** : Kumpulan dokumen (total 36 *Use Cases*, `UC-001` hingga `UC-036`) yang merinci alur interaksi antarmuka pengguna, selangkah demi selangkah. Termasuk fitur kompleks seperti Konfigurasi Target Grade & Syahrul Quran hingga Berlangganan Notifikasi Push.
+- 📂 **`system_logics/`** : Dokumentasi arsitektur sistem (API Contract) untuk ke-36 Use Cases tersebut. Membahas *state management*, validasi Zod, dan *query* Supabase secara teknis (Next.js 14 App Router + Server Actions).
+
+### 3. Database SQL
+- 🗄️ **`database_tahfidz (1).sql`** : *Data Definition Language* (DDL) lengkap untuk Supabase PostgreSQL. Mengandung 26 tabel beserta tipe enumerasi, fungsi otomatis (*auto-delete audit trail*), indeks performa, pembatas kustom (*exclusion constraint* untuk anti-tumpang tindih tanggal), serta Row Level Security (RLS) di semua tabel.
+
+---
+
+## 💻 Tech Stack Aplikasi (`si-tahfiz/`)
+
+- **Framework:** Next.js 14 (App Router)
+- **Bahasa:** TypeScript
+- **Styling:** Tailwind CSS + UI Components (radix-ui/shadcn)
+- **Database & Auth:** Supabase (dengan RLS untuk keamanan lapis database)
+- **Fitur Tambahan:** Service Worker & Firebase/Web Push (PWA/Notifikasi Real-time)
+
+---
+
+## 🚀 Setup Development
 
 ### Prerequisites
-
 - Node.js 18+
-- npm atau yarn
-- Akun Supabase (free tier cukup untuk development)
+- npm / yarn / pnpm
+- Akun Supabase (untuk Database & Autentikasi)
 
 ### Langkah Setup
 
-**1. Clone dan install dependencies:**
+**1. Clone dan Install Dependencies:**
 ```bash
 git clone <repo-url>
 cd si-tahfiz
 npm install
 ```
 
-**2. Setup environment variables:**
-
-Buat file `.env.local` di root project:
+**2. Konfigurasi Environment Variables:**
+Buat file `.env.local` di dalam folder `si-tahfiz/`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=your-vapid-public-key
 ```
 
-**3. Setup database:**
+**3. Setup Database (Supabase):**
+Buka Supabase SQL Editor dan jalankan isi dari file `database_tahfidz (1).sql` yang berada di direktori *root*. Ini akan meng-generate 26 tabel beserta seluruh struktur keamanan (RLS) dan data konfigurasi *default*.
 
-Buka Supabase SQL Editor dan jalankan file berikut secara berurutan:
-1. `database_tahfidz.sql` — membuat semua tabel, enum, index, dan RLS
-2. SQL RLS policies (lihat dokumentasi internal)
-
-**4. Buat akun TU pertama:**
-
-Di Supabase Dashboard → Authentication → Users → Add User:
-- Email: `admin@sitahfiz.com`
-- Password: sesuai kebutuhan
-- Centang Auto Confirm User
-
-Lalu jalankan SQL:
+**4. Pembuatan Akun Perdana:**
+Buka *Supabase Dashboard* → *Authentication* → Tambahkan pengguna secara manual (contoh: `admin@sitahfiz.com`).
+Kemudian jalankan *query* berikut di SQL Editor untuk memberikan wewenang Staff TU:
 ```sql
 INSERT INTO profiles (id, nama_lengkap, role, email)
 SELECT id, 'Admin TU', 'tu', 'admin@sitahfiz.com'
@@ -45,49 +75,15 @@ FROM auth.users
 WHERE email = 'admin@sitahfiz.com';
 ```
 
-**5. Jalankan development server:**
+**5. Jalankan Development Server:**
 ```bash
 npm run dev
 ```
+Aplikasi dapat diakses melalui `http://localhost:3000`.
 
-Buka `http://localhost:3000` — akan otomatis redirect ke `/login`.
+---
 
-## Login Default
+## 🔒 Login Info
+Setelah *setup*, masuklah menggunakan akun TU yang telah dibuat secara manual. Untuk menjaga integritas sistem, semua akun pengguna berikutnya (Kepsek, Koordinator, Pengampu, Orang Tua) hanya dapat dibuat, diatur, dan dikontrol eksklusif melalui dasbor **Staff TU**.
 
-Setelah setup, gunakan akun TU yang dibuat manual untuk pertama kali masuk. Semua akun lain (Koordinator, Pengampu, Orang Tua, Kepala Sekolah) dibuat melalui menu **Manajemen Akun** di dalam aplikasi.
-
-**Format login Orang Tua:**
-- Input: Nomor HP
-- Password otomatis: `TAHFIZ_{nomorHP}` (dibuat saat TU mendaftarkan akun)
-
-## Database
-
-Total 23 tabel dengan RLS (Row Level Security) aktif di semua tabel. Setiap role hanya dapat mengakses data sesuai kewenangannya.
-
-Lihat `data_model.md` untuk dokumentasi lengkap skema database.
-
-## Dokumentasi Tambahan
-
-| Dokumen | Deskripsi |
-|---------|-----------|
-| `srs.md` | Software Requirements Specification |
-| `information_architecture.md` | Peta URL dan navigasi per role |
-| `design_system.md` | Panduan visual, warna, tipografi |
-| `data_model.md` | Skema database dan relasi antar tabel |
-| `user_flows/` | Alur interaksi per use case |
-| `sys_logic/` | System logic dan API contract per use case |
-| `database_tahfidz.sql` | DDL lengkap siap dijalankan di Supabase |
-
-## Deployment
-
-Aplikasi siap di-deploy ke Vercel:
-
-```bash
-npm run build
-```
-
-Pastikan environment variables sudah dikonfigurasi di Vercel Dashboard sebelum deploy.
-
-## Lisensi
-
-Proyek ini dikembangkan untuk keperluan internal MTs TQ Jamilurrahman Yogyakarta.
+(Khusus Orang Tua login menggunakan Nomor HP, dengan *password default* format: `TAHFIZ_{nomorHP}`).

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Card } from '@/components/ui/card'
@@ -18,7 +18,7 @@ import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
 import { PullIndicator } from '@/components/ui/pull-indicator'
 
 export default function PengampuTikrarPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   // Date and Data States
@@ -133,7 +133,7 @@ export default function PengampuTikrarPage() {
       if (tikrarError) throw tikrarError
 
       // Transform raw query results to handle joined relation types
-      const transformedTikrars = (tikrarData as unknown as {
+      const transformedTikrars = ((tikrarData ?? []) as unknown as {
         id: string
         santri_id: string
         tanggal: string
@@ -147,7 +147,7 @@ export default function PengampuTikrarPage() {
           nama_lengkap: string | null
           kelas: string | null
         } | null
-      }[] || []).map((t) => ({
+      }[]).map((t) => ({
         ...t,
         santri: {
           nama_lengkap: t.santri?.nama_lengkap || '—',

@@ -6,7 +6,7 @@ export interface RoleStyle {
   rounded: 'full' | 'lg' | 'md'
   shadow: 'md' | 'sm' | 'none'
   spacing: 'loose' | 'normal' | 'dense'
-  role: 'tu' | 'koordinator' | 'pengampu' | 'ortu' | 'kepsek'
+  role: 'tu' | 'koordinator' | 'pengampu' | 'orang_tua' | 'kepsek'
 }
 
 const RoleStyleContext = createContext<RoleStyle | null>(null)
@@ -16,7 +16,7 @@ export function RoleStyleProvider({
   role,
 }: {
   children: React.ReactNode
-  role: 'tu' | 'koordinator' | 'pengampu' | 'ortu' | 'kepsek'
+  role: 'tu' | 'koordinator' | 'pengampu' | 'orang_tua' | 'kepsek'
 }) {
   const styles: Record<typeof role, RoleStyle> = {
     tu: {
@@ -37,11 +37,11 @@ export function RoleStyleProvider({
       spacing: 'loose',
       role: 'pengampu',
     },
-    ortu: {
+    orang_tua: {
       rounded: 'full',
       shadow: 'md',
       spacing: 'loose',
-      role: 'ortu',
+      role: 'orang_tua',
     },
     kepsek: {
       rounded: 'lg',

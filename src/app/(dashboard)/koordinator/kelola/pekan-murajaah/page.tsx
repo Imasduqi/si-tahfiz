@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
@@ -40,7 +40,7 @@ interface TargetMurajaah {
 }
 
 export default function KoordinatorKelolaPekanMurajaahPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   // Data States
@@ -191,7 +191,15 @@ export default function KoordinatorKelolaPekanMurajaahPage() {
           dibuat_oleh: currentUser.id
         })
 
-      if (insertError) throw insertError
+      if (insertError) {
+        if (insertError.code === '23P01') {
+          toast.error('Periode ini bertumpang tindih dengan Pekan Murajaah lain yang sudah ada')
+        } else {
+          toast.error('Gagal membuat periode: ' + insertError.message)
+        }
+        setIsSubmitting(false)
+        return
+      }
 
       toast.success('Pekan Murajaah berhasil ditetapkan')
       setIsCreateModalOpen(false)

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Modal } from '@/components/ui/modal'
@@ -33,7 +33,7 @@ interface PengampuOption {
 }
 
 export default function TuDataHalaqahPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user } = useUser()
 
   // State

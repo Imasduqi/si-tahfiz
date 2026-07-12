@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,7 @@ interface UkjWithSantri extends Ukj {
 }
 
 export default function PengampuUkjPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   const [halaqah, setHalaqah] = useState<Halaqah | null>(null)
@@ -71,23 +71,17 @@ export default function PengampuUkjPage() {
           .order('nama_lengkap')
 
         if (santriError) throw santriError
-        setSantriList(santriData || [])
+        setSantriList(santriData ?? [])
 
-        if (santriData && santriData.length > 0) {
-          const santriIds = santriData.map(s => s.id)
-          
-          // 3. Get UKJ records
-          const { data: ukjData, error: ukjError } = await supabase
-            .from('ukj')
-            .select('*, santri(nama_lengkap, kelas, grade)')
-            .in('santri_id', santriIds)
-            .order('created_at', { ascending: false })
+        // 3. Get UKJ records
+        const { data: ukjData, error: ukjError } = await supabase
+          .from('ukj')
+          .select('*, santri(nama_lengkap, kelas, grade)')
+          .eq('pengampu_id', currentUser.id)
+          .order('created_at', { ascending: false })
 
-          if (ukjError) throw ukjError
-          setUkjList((ukjData as unknown as UkjWithSantri[]) || [])
-        } else {
-          setUkjList([])
-        }
+        if (ukjError) throw ukjError
+        setUkjList((ukjData ?? []) as unknown as UkjWithSantri[])
       }
     } catch (error) {
       console.error('Fetch data error:', error)

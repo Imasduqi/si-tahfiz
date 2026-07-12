@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
@@ -11,15 +11,29 @@ import { Badge } from '@/components/ui/badge'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 import { toast } from 'sonner'
 import { formatDate, cn } from '@/lib/utils'
-import { Konfigurasi, HariLibur } from '@/types'
+import { Konfigurasi, HariLibur, TargetGrade, TargetSyahrulQuran } from '@/types'
 
 export default function TuKonfigurasiPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Data States
   const [config, setConfig] = useState<Konfigurasi | null>(null)
   const [hariLibur, setHariLibur] = useState<HariLibur[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  // Section 5 - Target Setoran Harian States
+  const [targetGrades, setTargetGrades] = useState<TargetGrade[]>([])
+  const [targetSQs, setTargetSQs] = useState<TargetSyahrulQuran[]>([])
+  const [activeSubTab, setActiveSubTab] = useState<'normal' | 'sq'>('normal')
+
+  // Edit Modal State (shared)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingType, setEditingType] = useState<'normal' | 'sq'>('normal')
+  const [editingRow, setEditingRow] = useState<TargetGrade | TargetSyahrulQuran | null>(null)
+  const [editMin, setEditMin] = useState('')
+  const [editMax, setEditMax] = useState('')
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({})
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
 
   // Section 1 - Semester Dates Form State
   const [mulaiGanjil, setMulaiGanjil] = useState('')
@@ -84,6 +98,25 @@ export default function TuKonfigurasiPage() {
 
       if (liburError) throw liburError
       setHariLibur(liburData || [])
+
+      // Fetch target harian normal
+      const { data: targetGradeList, error: targetGradeError } = await supabase
+        .from('target_grade')
+        .select('*')
+        .order('tipe_setoran')
+        .order('grade')
+
+      if (targetGradeError) throw targetGradeError
+      setTargetGrades(targetGradeList || [])
+
+      // Fetch target syahrul quran
+      const { data: targetSQList, error: targetSQError } = await supabase
+        .from('target_syahrul_quran')
+        .select('*')
+        .order('grade')
+
+      if (targetSQError) throw targetSQError
+      setTargetSQs(targetSQList || [])
 
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan'
@@ -294,6 +327,97 @@ export default function TuKonfigurasiPage() {
       toast.error('Gagal memperbarui maintenance mode: ' + msg)
     } finally {
       setIsSavingMaintenance(false)
+    }
+  }
+
+  const openEditModal = (type: 'normal' | 'sq', row: TargetGrade | TargetSyahrulQuran) => {
+    setEditingType(type)
+    setEditingRow(row)
+    setEditMin(row.target_min.toString())
+    setEditMax(row.target_max !== null ? row.target_max.toString() : '')
+    setEditErrors({})
+    setIsEditModalOpen(true)
+  }
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingRow) return
+
+    const errors: Record<string, string> = {}
+    const min = Number(editMin)
+
+    if (isNaN(min) || min <= 0) {
+      errors.targetMin = 'Target Min wajib diisi dan harus lebih besar dari 0'
+    }
+
+    let max: number | null = null
+    if (editMax.trim() !== '') {
+      max = Number(editMax)
+      if (isNaN(max) || max < 0) {
+        errors.targetMax = 'Target Max harus berupa angka valid'
+      } else if (max < min) {
+        errors.targetMax = 'Target Max harus lebih besar atau sama dengan Target Min'
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setEditErrors(errors)
+      return
+    }
+
+    setEditErrors({})
+    setIsSavingEdit(true)
+
+    try {
+      if (editingType === 'normal') {
+        const { error } = await supabase
+          .from('target_grade')
+          .update({
+            target_min: min,
+            target_max: max,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingRow.id)
+
+        if (error) throw error
+
+        toast.success('Target berhasil diperbarui')
+        
+        // Refetch normal targets
+        const { data } = await supabase
+          .from('target_grade')
+          .select('*')
+          .order('tipe_setoran')
+          .order('grade')
+        if (data) setTargetGrades(data)
+      } else {
+        const { error } = await supabase
+          .from('target_syahrul_quran')
+          .update({
+            target_min: min,
+            target_max: max,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingRow.id)
+
+        if (error) throw error
+
+        toast.success('Target Syahrul Quran berhasil diperbarui')
+
+        // Refetch SQ targets
+        const { data } = await supabase
+          .from('target_syahrul_quran')
+          .select('*')
+          .order('grade')
+        if (data) setTargetSQs(data)
+      }
+
+      setIsEditModalOpen(false)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan'
+      toast.error('Gagal menyimpan target: ' + msg)
+    } finally {
+      setIsSavingEdit(false)
     }
   }
 
@@ -531,6 +655,207 @@ export default function TuKonfigurasiPage() {
             </div>
           </div>
         </Card>
+
+        {/* Section 5 - Target Setoran Harian */}
+        <Card className="p-4 md:p-4 lg:col-span-2 space-y-6">
+          <div>
+            <h2 className="text-sm font-bold text-[#111827]">Target Setoran Harian</h2>
+            <p className="text-xs text-[#6B7280]">Kelola target minimal dan maksimal setoran harian untuk setiap grade.</p>
+          </div>
+
+          {/* Sub-tabs */}
+          <div className="flex border-b border-[#E5E7EB] -mx-4 px-4 sm:mx-0 sm:px-0">
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('normal')}
+              className={cn(
+                "pb-2 px-4 text-sm font-semibold border-b-2 transition-colors",
+                activeSubTab === 'normal'
+                  ? "border-[#10B981] text-[#10B981]"
+                  : "border-transparent text-[#6B7280] hover:text-[#111827]"
+              )}
+            >
+              Target Harian Normal
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('sq')}
+              className={cn(
+                "pb-2 px-4 text-sm font-semibold border-b-2 transition-colors",
+                activeSubTab === 'sq'
+                  ? "border-[#10B981] text-[#10B981]"
+                  : "border-transparent text-[#6B7280] hover:text-[#111827]"
+              )}
+            >
+              Target Syahrul Quran
+            </button>
+          </div>
+
+          {/* Sub-tab content */}
+          {activeSubTab === 'normal' ? (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#4B5563]">Sabak</h3>
+                <Table
+                  columns={[
+                    {
+                      key: 'grade',
+                      header: 'Grade',
+                      render: (item: TargetGrade) => <span className="capitalize">{item.grade}</span>
+                    },
+                    {
+                      key: 'target_min',
+                      header: 'Target Min',
+                      render: (item: TargetGrade) => `${item.target_min} Baris`
+                    },
+                    {
+                      key: 'target_max',
+                      header: 'Target Max',
+                      render: (item: TargetGrade) => item.target_max !== null ? `${item.target_max} Baris` : '-'
+                    },
+                    {
+                      key: 'aksi',
+                      header: 'Aksi',
+                      render: (item: TargetGrade) => (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => openEditModal('normal', item)}
+                        >
+                          Edit
+                        </Button>
+                      )
+                    }
+                  ]}
+                  data={targetGrades.filter(t => t.tipe_setoran === 'sabak')}
+                  empty="Belum ada data target Sabak"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#4B5563]">Sabki</h3>
+                <Table
+                  columns={[
+                    {
+                      key: 'grade',
+                      header: 'Grade',
+                      render: (item: TargetGrade) => <span className="capitalize">{item.grade}</span>
+                    },
+                    {
+                      key: 'target_min',
+                      header: 'Target Min',
+                      render: (item: TargetGrade) => `${item.target_min} Baris`
+                    },
+                    {
+                      key: 'target_max',
+                      header: 'Target Max',
+                      render: (item: TargetGrade) => item.target_max !== null ? `${item.target_max} Baris` : '-'
+                    },
+                    {
+                      key: 'aksi',
+                      header: 'Aksi',
+                      render: (item: TargetGrade) => (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => openEditModal('normal', item)}
+                        >
+                          Edit
+                        </Button>
+                      )
+                    }
+                  ]}
+                  data={targetGrades.filter(t => t.tipe_setoran === 'sabki')}
+                  empty="Belum ada data target Sabki"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#4B5563]">Manzil</h3>
+                <Table
+                  columns={[
+                    {
+                      key: 'grade',
+                      header: 'Grade',
+                      render: (item: TargetGrade) => <span className="capitalize">{item.grade}</span>
+                    },
+                    {
+                      key: 'target_min',
+                      header: 'Target Min',
+                      render: (item: TargetGrade) => `${item.target_min} Baris`
+                    },
+                    {
+                      key: 'target_max',
+                      header: 'Target Max',
+                      render: (item: TargetGrade) => item.target_max !== null ? `${item.target_max} Baris` : '-'
+                    },
+                    {
+                      key: 'aksi',
+                      header: 'Aksi',
+                      render: (item: TargetGrade) => (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => openEditModal('normal', item)}
+                        >
+                          Edit
+                        </Button>
+                      )
+                    }
+                  ]}
+                  data={targetGrades.filter(t => t.tipe_setoran === 'manzil')}
+                  empty="Belum ada data target Manzil"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-[#EFF6FF] border border-[#BFDBFE] p-3 rounded-lg flex items-start gap-2.5">
+                <svg className="w-4 h-4 text-[#2563EB] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-xs text-[#1E40AF]">
+                  Target ini hanya berlaku untuk Sabak selama periode Syahrul Quran aktif.
+                </p>
+              </div>
+
+              <Table
+                columns={[
+                  {
+                    key: 'grade',
+                    header: 'Grade',
+                    render: (item: TargetSyahrulQuran) => <span className="capitalize">{item.grade}</span>
+                  },
+                  {
+                    key: 'target_min',
+                    header: 'Target Min',
+                    render: (item: TargetSyahrulQuran) => `${item.target_min} Baris`
+                  },
+                  {
+                    key: 'target_max',
+                    header: 'Target Max',
+                    render: (item: TargetSyahrulQuran) => item.target_max !== null ? `${item.target_max} Baris` : '-'
+                  },
+                  {
+                    key: 'aksi',
+                    header: 'Aksi',
+                    render: (item: TargetSyahrulQuran) => (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => openEditModal('sq', item)}
+                      >
+                        Edit
+                      </Button>
+                    )
+                  }
+                ]}
+                data={targetSQs}
+                empty="Belum ada data target Syahrul Quran"
+              />
+            </div>
+          )}
+        </Card>
       </div>
 
       {/* Maintenance Confirmation Modal */}
@@ -562,6 +887,68 @@ export default function TuKonfigurasiPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Edit Target Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={editingType === 'normal' ? 'Edit Target Harian Normal' : 'Edit Target Syahrul Quran'}
+      >
+        <form onSubmit={handleSaveEdit} className="space-y-4">
+          <div className="space-y-4">
+            <div>
+              <span className="block text-xs font-semibold text-[#111827] mb-1.5">Grade</span>
+              <div className="bg-[#F3F4F6] border border-[#E5E7EB] rounded-lg px-[14px] py-[10px] text-sm text-[#374151] capitalize font-medium">
+                {editingRow?.grade || '-'}
+              </div>
+            </div>
+
+            {editingType === 'normal' && (
+              <div>
+                <span className="block text-xs font-semibold text-[#111827] mb-1.5">Tipe Setoran</span>
+                <div className="bg-[#F3F4F6] border border-[#E5E7EB] rounded-lg px-[14px] py-[10px] text-sm text-[#374151] capitalize font-medium">
+                  {(editingRow as TargetGrade)?.tipe_setoran || '-'}
+                </div>
+              </div>
+            )}
+
+            <Input
+              type="number"
+              label="Target Min (Baris)"
+              required
+              min="1"
+              value={editMin}
+              onChange={(e) => setEditMin(e.target.value)}
+              error={editErrors.targetMin}
+            />
+
+            <Input
+              type="number"
+              label="Target Max (Baris) - Opsional"
+              value={editMax}
+              onChange={(e) => setEditMax(e.target.value)}
+              error={editErrors.targetMax}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsEditModalOpen(false)}
+              disabled={isSavingEdit}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              isLoading={isSavingEdit}
+            >
+              Simpan
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   )

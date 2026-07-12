@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Card } from '@/components/ui/card'
@@ -17,7 +17,7 @@ import { sendAlphaPushNotification } from '@/lib/actions/push-notification'
 
 
 export default function PengampuAbsensiPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   // Date and Data States
@@ -29,7 +29,7 @@ export default function PengampuAbsensiPage() {
   const [isPageLoading, setIsPageLoading] = useState<boolean>(true)
   const [isDataFetching, setIsDataFetching] = useState<boolean>(false)
   const [selectedSantri, setSelectedSantri] = useState<Santri | null>(null)
-  const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [savingKey, setSavingKey] = useState<string | null>(null)
 
   // Fetch Halaqah & Santri once on load
   useEffect(() => {
@@ -154,7 +154,8 @@ export default function PengampuAbsensiPage() {
   // Save/Update Absensi Status
   const handleUpdateStatus = async (status: 'alpha' | 'sakit' | 'izin' | null) => {
     if (!selectedSantri) return
-    setIsSaving(true)
+    const key = `${selectedSantri.id}-${status}`
+    setSavingKey(key)
     try {
       if (status === null) {
         // Delete record (back to Hadir)
@@ -214,7 +215,7 @@ export default function PengampuAbsensiPage() {
       console.error('Error saving absensi:', err)
       toast.error('Gagal menyimpan absensi')
     } finally {
-      setIsSaving(false)
+      setSavingKey(null)
     }
   }
 
@@ -467,7 +468,8 @@ export default function PengampuAbsensiPage() {
                   onClick={() => handleUpdateStatus('alpha')}
                   variant="danger"
                   rounded="lg"
-                  isLoading={isSaving}
+                  isLoading={savingKey === `${selectedSantri.id}-alpha`}
+                  disabled={savingKey !== null}
                   className="w-full justify-start text-left px-4"
                 >
                   Tandai Alpha
@@ -480,7 +482,8 @@ export default function PengampuAbsensiPage() {
                   onClick={() => handleUpdateStatus('sakit')}
                   variant="secondary"
                   rounded="lg"
-                  isLoading={isSaving}
+                  isLoading={savingKey === `${selectedSantri.id}-sakit`}
+                  disabled={savingKey !== null}
                   className="w-full justify-start text-left px-4 border-purple-200 text-purple-700 hover:bg-purple-50"
                 >
                   Tandai Sakit
@@ -493,7 +496,8 @@ export default function PengampuAbsensiPage() {
                   onClick={() => handleUpdateStatus('izin')}
                   variant="secondary"
                   rounded="lg"
-                  isLoading={isSaving}
+                  isLoading={savingKey === `${selectedSantri.id}-izin`}
+                  disabled={savingKey !== null}
                   className="w-full justify-start text-left px-4 border-blue-200 text-blue-700 hover:bg-blue-50"
                 >
                   Tandai Izin
@@ -506,7 +510,8 @@ export default function PengampuAbsensiPage() {
                   onClick={() => handleUpdateStatus(null)}
                   variant="primary"
                   rounded="lg"
-                  isLoading={isSaving}
+                  isLoading={savingKey === `${selectedSantri.id}-null`}
+                  disabled={savingKey !== null}
                   className="w-full justify-start text-left px-4 bg-[#10B981] hover:bg-[#059669]"
                 >
                   Kembalikan ke Hadir (Hapus Record)
@@ -517,7 +522,7 @@ export default function PengampuAbsensiPage() {
                 onClick={() => setSelectedSantri(null)}
                 variant="ghost"
                 rounded="lg"
-                disabled={isSaving}
+                disabled={savingKey !== null}
                 className="w-full border border-[#E5E7EB] hover:bg-[#F3F4F6] text-[#4B5563]"
               >
                 Batal

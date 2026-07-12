@@ -5,7 +5,13 @@ const _self = self as any
 _self.addEventListener('push', (event: any) => {
   if (!event.data) return
 
-  const data = event.data.json()
+  let data: { title: string; body: string; icon?: string; badge?: string; tag?: string; url?: string }
+  try {
+    data = event.data.json()
+  } catch (err) {
+    console.error('Failed to parse push payload:', err)
+    return
+  }
 
   event.waitUntil(
     _self.registration.showNotification(data.title, {

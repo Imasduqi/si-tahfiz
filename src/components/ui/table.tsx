@@ -14,6 +14,7 @@ export interface TableColumn<T = any> {
 export interface TableProps<T = any> {
   columns: TableColumn<T>[]
   data: T[]
+  getRowKey?: (row: T, index: number) => string | number
   isLoading?: boolean
   empty?: {
     title?: string
@@ -26,6 +27,7 @@ export interface TableProps<T = any> {
 export function Table({
   columns,
   data,
+  getRowKey,
   isLoading,
   empty,
   className,
@@ -63,7 +65,7 @@ export function Table({
         <tbody className="bg-white divide-y divide-[#E5E7EB]">
           {data.map((row, rowIndex) => (
             <tr
-              key={rowIndex}
+              key={getRowKey ? getRowKey(row, rowIndex) : ((row as any).id ?? `row-${rowIndex}`)}
               className="hover:bg-[#F9FAFB] transition-colors border-b border-[#E5E7EB] last:border-0"
             >
               {columns.map((col) => (

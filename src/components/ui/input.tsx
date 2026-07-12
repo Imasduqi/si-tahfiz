@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useId } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -7,18 +7,21 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type = 'text', error, label, placeholder, ...props }, ref) => {
+  ({ className, type = 'text', error, label, placeholder, id, ...props }, ref) => {
+    const generatedId = useId()
+    const inputId = id ?? generatedId
     const hasError = !!error
     const errorMessage = typeof error === 'string' ? error : undefined
 
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-xs font-semibold text-[#111827] mb-1.5">
+          <label htmlFor={inputId} className="block text-xs font-semibold text-[#111827] mb-1.5">
             {label}
           </label>
         )}
         <input
+          id={inputId}
           type={type}
           placeholder={placeholder}
           className={cn(

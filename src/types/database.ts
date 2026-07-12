@@ -66,6 +66,15 @@ export interface HariLibur {
 export interface TargetGrade {
   id: string
   grade: Grade
+  tipe_setoran: TipeSetoran
+  target_min: number
+  target_max: number | null
+  updated_at: string
+}
+
+export interface TargetSyahrulQuran {
+  id: string
+  grade: Grade
   target_min: number
   target_max: number | null
   updated_at: string
@@ -219,5 +228,22 @@ export interface AuditTrail {
   id: string
   user_id: string
   aktivitas: string
+  created_at: string
+}
+
+export interface PushSubscription {
+  id: string
+  user_id: string
+  endpoint: string
+  p256dh: string
+  auth_key: string
+  created_at: string
+}
+
+export interface MobilePushToken {
+  id: string
+  user_id: string
+  fcm_token: string
+  platform: string
   created_at: string
 }

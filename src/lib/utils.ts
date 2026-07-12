@@ -18,7 +18,18 @@ export function formatDateShort(date: string): string {
 }
 
 export function getTodayString(): string {
-  return new Date().toISOString().split('T')[0]
+  const now = new Date()
+  // Convert to WIB (UTC+7) explicitly rather than relying on server/browser local timezone,
+  // since this must be consistent whether running on a server (which may be UTC) or a
+  // user's browser (which may be in any timezone if they're traveling, etc.)
+  const wibOffset = 7 * 60 // minutes
+  const wibDate = new Date(now.getTime() + wibOffset * 60 * 1000)
+
+  const year = wibDate.getUTCFullYear()
+  const month = String(wibDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(wibDate.getUTCDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 export function isWeekday(date: Date): boolean {
@@ -39,3 +50,10 @@ export function formatDateWithDay(date: string): string {
   })
 }
 
+export function getRequiredEnv(key: string): string {
+  const value = process.env[key]
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`)
+  }
+  return value
+}

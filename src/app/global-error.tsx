@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect } from 'react'
+
 export default function GlobalError({
   error,
   reset,
@@ -7,6 +9,10 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    console.error('Application error:', error)
+  }, [error])
+
   return (
     <html lang="id">
       <body
@@ -29,7 +35,7 @@ export default function GlobalError({
             Kesalahan Kritis
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-            {error.message || 'Aplikasi mengalami kesalahan serius. Silakan muat ulang halaman.'}
+            Mohon maaf, terjadi kesalahan pada sistem. Silakan coba lagi atau hubungi admin jika masalah berlanjut.
           </p>
           <button
             onClick={reset}

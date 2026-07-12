@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 interface UsePullToRefreshOptions {
@@ -11,6 +13,11 @@ export function usePullToRefresh({ onRefresh, threshold = 80 }: UsePullToRefresh
   const startY = useRef(0)
   const isPulling = useRef(false)
   const isRefreshingRef = useRef(false)
+  const pullDistanceRef = useRef(pullDistance)
+
+  useEffect(() => {
+    pullDistanceRef.current = pullDistance
+  }, [pullDistance])
 
   const handleRefresh = useCallback(async () => {
     if (isRefreshingRef.current) return
@@ -45,7 +52,7 @@ export function usePullToRefresh({ onRefresh, threshold = 80 }: UsePullToRefresh
     const handleTouchEnd = async () => {
       if (!isPulling.current) return
       isPulling.current = false
-      if (pullDistance >= threshold) {
+      if (pullDistanceRef.current >= threshold) {
         await handleRefresh()
       } else {
         setPullDistance(0)
@@ -61,7 +68,7 @@ export function usePullToRefresh({ onRefresh, threshold = 80 }: UsePullToRefresh
       document.removeEventListener('touchmove', handleTouchMove)
       document.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [pullDistance, threshold, handleRefresh])
+  }, [threshold, handleRefresh])
 
   return { isRefreshing, pullDistance }
 }

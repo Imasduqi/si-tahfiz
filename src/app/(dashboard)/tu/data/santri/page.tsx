@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState , useMemo} from 'react'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
@@ -73,7 +73,7 @@ interface ImportFinalResult {
 // ─── Page Component ─────────────────────────────────────────────────────────
 
 export default function TuDataSantriPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user } = useUser()
 
   // Data State

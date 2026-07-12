@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
@@ -39,7 +39,7 @@ interface Message {
 }
 
 export default function PengampuPesanPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   // Data States
@@ -66,27 +66,36 @@ export default function PengampuPesanPage() {
 
   // Load last read timestamps from localStorage on mount
   useEffect(() => {
+    if (!currentUser?.id) return
+    const READ_STATUS_KEY = `pesan_read_status_${currentUser.id}`
     try {
-      const stored = localStorage.getItem('sitahfiz_chat_last_read')
+      const stored = localStorage.getItem(READ_STATUS_KEY)
       if (stored) {
         setLastReadMap(JSON.parse(stored))
       }
     } catch (e) {
       console.error('Failed to parse chat read status:', e)
     }
-  }, [])
+  }, [currentUser?.id])
 
   // Update read status for a specific conversation
   const markAsRead = (percakapanId: string) => {
+    if (!currentUser?.id) return
+    const READ_STATUS_KEY = `pesan_read_status_${currentUser.id}`
     const nowStr = new Date().toISOString()
     const updated = { ...lastReadMap, [percakapanId]: nowStr }
     setLastReadMap(updated)
     try {
-      localStorage.setItem('sitahfiz_chat_last_read', JSON.stringify(updated))
+      localStorage.setItem(READ_STATUS_KEY, JSON.stringify(updated))
     } catch (e) {
       console.error('Failed to save chat read status:', e)
     }
   }
+
+  const markAsReadRef = useRef(markAsRead)
+  useEffect(() => {
+    markAsReadRef.current = markAsRead
+  }, [markAsRead])
 
   // Fetch initial data
   useEffect(() => {
@@ -245,7 +254,7 @@ export default function PengampuPesanPage() {
             [activePercakapan.id]: newMsg
           }))
           // Mark read if active
-          markAsRead(activePercakapan.id)
+          markAsReadRef.current(activePercakapan.id)
         }
       )
       .subscribe()

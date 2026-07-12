@@ -18,10 +18,15 @@ export interface BottomNavProps {
 
 export function BottomNav({ items }: BottomNavProps) {
   const pathname = usePathname()
+  if (process.env.NODE_ENV === 'development' && items.length > 4) {
+    console.warn(`BottomNav received ${items.length} items but only displays a maximum of 4. Extra items will not be shown.`)
+  }
+
   const displayItems = items.slice(0, 4)
 
   return (
     <nav
+      aria-label="Navigasi utama"
       className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-[64px] flex justify-around items-center px-2 bottom-nav-safe"
       style={{
         background: '#FFFFFF',

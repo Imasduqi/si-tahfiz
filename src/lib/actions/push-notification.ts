@@ -3,17 +3,22 @@
 import webpush from 'web-push'
 import { createAdminClient } from '@/lib/supabase/server'
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
-
 export async function sendAlphaPushNotification(
   ortuId: string,
   santriNama: string,
   tanggal: string
 ): Promise<void> {
+  const vapidSubject = process.env.VAPID_SUBJECT
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+
+  if (!vapidSubject || !vapidPublicKey || !vapidPrivateKey) {
+    console.warn('VAPID keys not configured, skipping push notification')
+    return
+  }
+
+  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
+
   try {
     const adminClient = await createAdminClient()
 

@@ -1,28 +1,40 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 import { toast } from 'sonner'
-import { FileSpreadsheet, AlertCircle } from 'lucide-react'
-import { Konfigurasi } from '@/types'
-import { generateRekapExcel } from '@/lib/excel/generate-rekap'
+import { FileSpreadsheet, AlertCircle, CalendarDays } from 'lucide-react'
+import { Konfigurasi, SyahrulQuran } from '@/types'
+import {
+  generateRekapSyahrulQuranExcel,
+  fetchDataForSyahrulQuranRekap,
+} from '@/lib/excel/generate-rekap-syahrul-quran'
 import * as XLSX from 'xlsx'
+import { useRekapGenerator } from '@/lib/hooks/use-rekap-generator'
+import { getTodayString } from '@/lib/utils'
 
 export default function KepsekRekapPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   const [konfigurasi, setKonfigurasi] = useState<Konfigurasi | null>(null)
   const [semester, setSemester] = useState<'ganjil' | 'genap'>('ganjil')
   const [tahunAjaran, setTahunAjaran] = useState('')
-  const [isGenerating, setIsGenerating] = useState(false)
   const [isLoadingConfig, setIsLoadingConfig] = useState(true)
+
+  // Syahrul Quran section state
+  const [syahrulQuranPeriods, setSyahrulQuranPeriods] = useState<SyahrulQuran[]>([])
+  const [selectedSyahrulId, setSelectedSyahrulId] = useState('')
+  const [isGeneratingSyahrul, setIsGeneratingSyahrul] = useState(false)
+
+  const { generateRekap, isGenerating } = useRekapGenerator()
 
   // Redirect if not logged in
   useEffect(() => {
@@ -33,6 +45,7 @@ export default function KepsekRekapPage() {
 
   // Fetch configuration on load to resolve current semester and year
   useEffect(() => {
+    let isMounted = true
     async function loadConfig() {
       try {
         const { data, error } = await supabase
@@ -41,176 +54,104 @@ export default function KepsekRekapPage() {
           .single()
 
         if (error) throw error
-        setKonfigurasi(data)
+        
+        if (isMounted) {
+          setKonfigurasi(data)
 
-        // Resolve current semester & year based on dates
-        const now = new Date()
-        const todayStr = now.toISOString().split('T')[0]
-        const currentYear = now.getFullYear()
+          // Resolve current semester & year based on dates
+          const now = new Date()
+          const todayStr = getTodayString()
+          const currentYear = now.getFullYear()
 
-        if (data) {
-          if (data.tanggal_mulai_ganjil && data.tanggal_selesai_ganjil) {
-            if (todayStr >= data.tanggal_mulai_ganjil && todayStr <= data.tanggal_selesai_ganjil) {
-              const startYear = new Date(data.tanggal_mulai_ganjil).getFullYear()
-              setSemester('ganjil')
-              setTahunAjaran(`${startYear}/${startYear + 1}`)
-              return
+          if (data) {
+            if (data.tanggal_mulai_ganjil && data.tanggal_selesai_ganjil) {
+              if (todayStr >= data.tanggal_mulai_ganjil && todayStr <= data.tanggal_selesai_ganjil) {
+                const startYear = new Date(data.tanggal_mulai_ganjil).getFullYear()
+                setSemester('ganjil')
+                setTahunAjaran(`${startYear}/${startYear + 1}`)
+                return
+              }
+            }
+            if (data.tanggal_mulai_genap && data.tanggal_selesai_genap) {
+              if (todayStr >= data.tanggal_mulai_genap && todayStr <= data.tanggal_selesai_genap) {
+                const endYear = new Date(data.tanggal_selesai_genap).getFullYear()
+                setSemester('genap')
+                setTahunAjaran(`${endYear - 1}/${endYear}`)
+                return
+              }
             }
           }
-          if (data.tanggal_mulai_genap && data.tanggal_selesai_genap) {
-            if (todayStr >= data.tanggal_mulai_genap && todayStr <= data.tanggal_selesai_genap) {
-              const endYear = new Date(data.tanggal_selesai_genap).getFullYear()
-              setSemester('genap')
-              setTahunAjaran(`${endYear - 1}/${endYear}`)
-              return
-            }
-          }
-        }
 
-        // Fallback
-        const month = now.getMonth() + 1
-        if (month >= 7 && month <= 12) {
-          setSemester('ganjil')
-          setTahunAjaran(`${currentYear}/${currentYear + 1}`)
-        } else {
-          setSemester('genap')
-          setTahunAjaran(`${currentYear - 1}/${currentYear}`)
+          // Fallback
+          const month = now.getMonth() + 1
+          if (month >= 7 && month <= 12) {
+            setSemester('ganjil')
+            setTahunAjaran(`${currentYear}/${currentYear + 1}`)
+          } else {
+            setSemester('genap')
+            setTahunAjaran(`${currentYear - 1}/${currentYear}`)
+          }
         }
       } catch (err) {
         console.error('Failed to load configuration:', err)
-        toast.error('Gagal memuat konfigurasi sistem')
+        if (isMounted) {
+          toast.error('Gagal memuat konfigurasi sistem')
+        }
       } finally {
-        setIsLoadingConfig(false)
+        if (isMounted) {
+          setIsLoadingConfig(false)
+        }
       }
     }
 
     if (currentUser) {
       loadConfig()
     }
+    
+    return () => { isMounted = false }
   }, [currentUser, supabase])
+
+  // Fetch Syahrul Quran periods on load
+  useEffect(() => {
+    let isMounted = true
+    async function loadSyahrulQuranPeriods() {
+      const { data } = await supabase
+        .from('syahrul_quran')
+        .select('*')
+        .order('tanggal_mulai', { ascending: false })
+      if (isMounted) {
+        setSyahrulQuranPeriods((data ?? []) as SyahrulQuran[])
+      }
+    }
+    if (currentUser) {
+      loadSyahrulQuranPeriods()
+    }
+    return () => { isMounted = false }
+  }, [currentUser, supabase])
+
+  const handleDownloadSyahrulQuran = async () => {
+    if (!selectedSyahrulId) return
+    setIsGeneratingSyahrul(true)
+    try {
+      const data = await fetchDataForSyahrulQuranRekap(supabase, selectedSyahrulId)
+      const wb = generateRekapSyahrulQuranExcel({
+        halaqahList: data.halaqahList,
+        santriList: data.santriList,
+        setoranList: data.setoranList,
+        syahrulQuranPeriod: data.periode,
+      })
+      XLSX.writeFile(wb, `Rekap_Syahrul_Quran_${data.periode.tanggal_mulai}.xlsx`)
+      toast.success('File Excel berhasil didownload')
+    } catch (err) {
+      toast.error('Gagal membuat rekap: ' + String(err))
+    } finally {
+      setIsGeneratingSyahrul(false)
+    }
+  }
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!semester) {
-      toast.error('Pilih semester terlebih dahulu')
-      return
-    }
-
-    if (!tahunAjaran) {
-      toast.error('Masukkan tahun ajaran terlebih dahulu')
-      return
-    }
-
-    // Validate format YYYY/YYYY
-    const yearPattern = /^[0-9]{4}\/[0-9]{4}$/
-    if (!yearPattern.test(tahunAjaran)) {
-      toast.error('Format tahun ajaran harus YYYY/YYYY (contoh: 2025/2026)')
-      return
-    }
-
-    if (!konfigurasi) {
-      toast.error('Konfigurasi sistem belum dimuat')
-      return
-    }
-
-    const tanggalMulai = semester === 'ganjil' ? konfigurasi.tanggal_mulai_ganjil : konfigurasi.tanggal_mulai_genap
-    const tanggalSelesai = semester === 'ganjil' ? konfigurasi.tanggal_selesai_ganjil : konfigurasi.tanggal_selesai_genap
-
-    if (!tanggalMulai || !tanggalSelesai) {
-      toast.error(`Tanggal mulai/selesai untuk semester ${semester} belum diatur di Konfigurasi oleh TU!`)
-      return
-    }
-
-    setIsGenerating(true)
-    const toastId = toast.loading('Mengambil data dan men-generate file Excel...')
-
-    try {
-      // Parallel fetch all data
-      const [
-        halaqahRes, santriRes, setoranRes, absensiRes,
-        uasRes, uasDetailRes, akhlaqRes, hariLiburRes,
-        syahrulRes, pekanRes, targetGradeRes
-      ] = await Promise.all([
-        supabase.from('halaqah').select('*, profiles(nama_lengkap)'),
-        supabase.from('santri').select('*').order('nama_lengkap'),
-        supabase.from('setoran').select('*')
-          .gte('tanggal', tanggalMulai)
-          .lte('tanggal', tanggalSelesai),
-        supabase.from('absensi').select('*')
-          .gte('tanggal', tanggalMulai)
-          .lte('tanggal', tanggalSelesai),
-        supabase.from('uas').select('*')
-          .eq('semester', semester)
-          .eq('tahun_ajaran', tahunAjaran),
-        supabase.from('uas_detail').select('*'),
-        supabase.from('akhlaq').select('*')
-          .eq('semester', semester)
-          .eq('tahun_ajaran', tahunAjaran),
-        supabase.from('hari_libur').select('tanggal')
-          .gte('tanggal', tanggalMulai)
-          .lte('tanggal', tanggalSelesai),
-        supabase.from('syahrul_quran').select('*'),
-        supabase.from('pekan_murajaah').select('*'),
-        supabase.from('target_grade').select('*')
-      ])
-
-      // Handle errors
-      if (halaqahRes.error) throw halaqahRes.error
-      if (santriRes.error) throw santriRes.error
-      if (setoranRes.error) throw setoranRes.error
-      if (absensiRes.error) throw absensiRes.error
-      if (uasRes.error) throw uasRes.error
-      if (uasDetailRes.error) throw uasDetailRes.error
-      if (akhlaqRes.error) throw akhlaqRes.error
-      if (hariLiburRes.error) throw hariLiburRes.error
-      if (syahrulRes.error) throw syahrulRes.error
-      if (pekanRes.error) throw pekanRes.error
-      if (targetGradeRes.error) throw targetGradeRes.error
-
-      const halaqahList = halaqahRes.data || []
-      const santriList = santriRes.data || []
-
-      if (halaqahList.length === 0) {
-        toast.error('Tidak ada data halaqah untuk semester ini', { id: toastId })
-        setIsGenerating(false)
-        return
-      }
-
-      if (santriList.length === 0) {
-        toast.error('Tidak ada data santri untuk semester ini', { id: toastId })
-        setIsGenerating(false)
-        return
-      }
-
-      // Generate excel
-      const wb = generateRekapExcel({
-        halaqahList,
-        santriList,
-        setoranList: setoranRes.data || [],
-        absensiList: absensiRes.data || [],
-        uasList: uasRes.data || [],
-        uasDetailList: uasDetailRes.data || [],
-        akhlaqList: akhlaqRes.data || [],
-        hariLiburList: hariLiburRes.data || [],
-        syahrulList: syahrulRes.data || [],
-        pekanList: pekanRes.data || [],
-        konfigurasi,
-        semester,
-        tahunAjaran,
-        targetGradeList: targetGradeRes.data || []
-      })
-
-      // Download file
-      XLSX.writeFile(wb, `Rekap_${semester}_${tahunAjaran.replace('/', '-')}.xlsx`)
-      toast.success('File Excel berhasil didownload', { id: toastId })
-
-    } catch (err) {
-      console.error('Failed to generate Excel:', err)
-      toast.error('Gagal membuat rekap Excel. Coba lagi.', { id: toastId })
-    } finally {
-      setIsGenerating(false)
-    }
+    await generateRekap(semester, tahunAjaran, konfigurasi)
   }
 
   if (userLoading || isLoadingConfig) {
@@ -281,6 +222,64 @@ export default function KepsekRekapPage() {
             </Button>
           </div>
         </form>
+      </Card>
+
+      {/* ── Rekap Syahrul Quran ─────────────────────────────────────────── */}
+      <Card shadow="md" className="overflow-hidden border border-[#E5E7EB] bg-white">
+        <div className="bg-gradient-to-r from-teal-50 to-cyan-50 p-4 border-b border-[#E5E7EB] flex items-start gap-3">
+          <CalendarDays className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <span className="font-semibold text-teal-800 text-sm block mb-0.5">Rekap Syahrul Quran</span>
+            <p className="text-xs text-teal-700 leading-relaxed">
+              Unduh rekap setoran Sabak harian selama periode Syahrul Quran tertentu. Setiap halaqah mendapat dua sheet: tabel harian dan ringkasan status lulus/mengulang.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {syahrulQuranPeriods.length === 0 ? (
+            <EmptyState
+              title="Belum ada periode Syahrul Quran"
+              description="Periode akan muncul di sini setelah Koordinator menetapkannya."
+            />
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3 items-end">
+              <div className="flex-1">
+                <label
+                  htmlFor="syahrul-quran-select"
+                  className="block text-xs font-semibold text-[#111827] mb-1.5"
+                >
+                  Pilih Periode Syahrul Quran
+                </label>
+                <select
+                  id="syahrul-quran-select"
+                  value={selectedSyahrulId}
+                  onChange={e => setSelectedSyahrulId(e.target.value)}
+                  className="w-full bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-[14px] py-[10px] text-sm text-[#111827] outline-none focus:border-2 focus:border-[#10B981] transition-all"
+                >
+                  <option value="">Pilih periode...</option>
+                  {syahrulQuranPeriods.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {new Date(p.tanggal_mulai + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {' — '}
+                      {new Date(p.tanggal_selesai + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                id="download-syahrul-quran-btn-kepsek"
+                onClick={handleDownloadSyahrulQuran}
+                disabled={!selectedSyahrulId || isGeneratingSyahrul}
+                isLoading={isGeneratingSyahrul}
+                className="flex items-center gap-2 font-semibold whitespace-nowrap"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Download Rekap Syahrul Quran
+              </Button>
+            </div>
+          )}
+        </div>
       </Card>
     </div>
   )

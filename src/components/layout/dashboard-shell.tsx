@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { Topbar } from './topbar'
 import { Sidebar } from './sidebar'
 import { BottomNav } from './bottom-nav'
@@ -17,7 +17,7 @@ export interface NavItem {
 
 export interface DashboardShellProps {
   navItems: NavItem[]
-  role: 'tu' | 'koordinator' | 'pengampu' | 'ortu' | 'kepsek'
+  role: 'tu' | 'koordinator' | 'pengampu' | 'orang_tua' | 'kepsek'
   children: React.ReactNode
 }
 
@@ -33,7 +33,7 @@ export function DashboardShell({ navItems, role, children }: DashboardShellProps
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null)
   const [showUpdateBanner, setShowUpdateBanner] = useState(false)
 
-  usePushSubscription(role === 'ortu' ? 'orang_tua' : role)
+  usePushSubscription(role)
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
@@ -59,7 +59,7 @@ export function DashboardShell({ navItems, role, children }: DashboardShellProps
     })
   }
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const handleToggleSidebar = () => setIsCollapsed(prev => !prev)
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export function DashboardShell({ navItems, role, children }: DashboardShellProps
         const { data: readRows, error: readError } = await supabase.from('pengumuman_read').select('pengumuman_id').eq('user_id', user.id)
         if (readError) throw readError
         const readIds = readRows?.map(r => r.pengumuman_id) || []
-        const targetRole = role === 'ortu' ? 'orang_tua' : role
+        const targetRole = role
         const { data: allRows, error: queryError } = await supabase.from('pengumuman').select('id, judul, isi').contains('target_role', [targetRole])
         if (queryError) throw queryError
         const toShow = (allRows ?? []).filter(p => !readIds.includes(p.id))

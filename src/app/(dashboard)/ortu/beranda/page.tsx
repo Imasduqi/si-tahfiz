@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { EmptyState } from '@/components/ui/empty-state'
-import { formatDateWithDay } from '@/lib/utils'
+import { formatDateWithDay, getTodayString } from '@/lib/utils'
 import { BookOpen, RefreshCw, Calendar, ChevronRight, GraduationCap, MapPin, Sparkles, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -30,10 +30,41 @@ const QUOTES = [
   { ar: 'وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا', id: 'Dan bacalah Al-Qur\'an dengan tartil (perlahan-lahan).', ref: 'QS. Al-Muzzammil: 4' },
   { ar: 'إِنَّ مَعَ الْعُسْرِ يُسْرًا', id: 'Sesungguhnya bersama kesulitan ada kemudahan.', ref: 'QS. Al-Insyirah: 6' },
   { ar: 'اقْرَأْ بِاسْمِ رَبِّكَ', id: 'Bacalah dengan menyebut nama Tuhanmu.', ref: 'QS. Al-Alaq: 1' },
-]
+  { ar: 'وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ فَهَلْ مِنْ مُدَّكِرٍ', id: 'Dan sungguh, telah Kami mudahkan Al-Qur\'an untuk peringatan, maka adakah orang yang mau mengambil pelajaran?', ref: 'QS. Al-Qamar: 17' },
+  { ar: 'إِنَّا نَحْنُ نَزَّلْنَا الذِّكْرَ وَإِنَّا لَهُ لَحَافِظُونَ', id: 'Sesungguhnya Kami-lah yang menurunkan Al-Qur\'an, dan sesungguhnya Kami benar-benar memeliharanya.', ref: 'QS. Al-Hijr: 9' },
+  { ar: 'خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ', id: 'Sebaik-baik kalian adalah orang yang belajar Al-Qur\'an dan mengajarkannya.', ref: 'HR. Bukhari' },
+  { ar: 'يَرْفَعُ اللَّهُ الَّذِينَ آمَنُوا مِنْكُمْ وَالَّذِينَ أُوتُوا الْعِلْمَ دَرَجَاتٍ', id: 'Allah akan mengangkat derajat orang-orang yang beriman di antaramu dan orang-orang yang berilmu pengetahuan.', ref: 'QS. Al-Mujadalah: 11' },
+  { ar: 'فَاذْكُرُونِي أَذْكُرْكُمْ', id: 'Maka ingatlah kepada-Ku, niscaya Aku ingat (pula) kepadamu.', ref: 'QS. Al-Baqarah: 152' },
+  { ar: 'وَمَنْ يَتَّقِ اللَّهَ يَجْعَلْ لَهُ مَخْرَجًا', id: 'Dan barangsiapa bertakwa kepada Allah, niscaya Dia akan mengadakan baginya jalan keluar.', ref: 'QS. At-Talaq: 2' },
+  { ar: 'إِنَّ اللَّهَ مَعَ الصَّابِرِينَ', id: 'Sesungguhnya Allah beserta orang-orang yang sabar.', ref: 'QS. Al-Baqarah: 153' },
+  { ar: 'وَقُلْ رَبِّ زِدْنِي عِلْمًا', id: 'Dan katakanlah: "Ya Tuhanku, tambahkanlah kepadaku ilmu pengetahuan."', ref: 'QS. Taha: 114' },
+  { ar: 'إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ', id: 'Sesungguhnya Al-Qur\'an ini memberi petunjuk kepada (jalan) yang paling lurus.', ref: 'QS. Al-Isra: 9' },
+  { ar: 'مَنْ قَرَأَ حَرْفًا مِنْ كِتَابِ اللَّهِ فَلَهُ بِهِ حَسَنَةٌ', id: 'Barangsiapa membaca satu huruf dari Kitabullah, maka baginya satu kebaikan.', ref: 'HR. Tirmidzi' },
+  { ar: 'وَنُنَزِّلُ مِنَ الْقُرْآنِ مَا هُوَ شِفَاءٌ وَرَحْمَةٌ لِلْمُؤْمِنِينَ', id: 'Dan Kami turunkan dari Al-Qur\'an sesuatu yang menjadi penawar dan rahmat bagi orang-orang yang beriman.', ref: 'QS. Al-Isra: 82' },
+  { ar: 'وَإِذَا قُرِئَ الْقُرْآنُ فَاسْتَمِعُوا لَهُ وَأَنْصِتُوا', id: 'Dan apabila dibacakan Al-Qur\'an, maka dengarkanlah dan diamlah, agar kamu mendapat rahmat.', ref: 'QS. Al-A\'raf: 204' },
+  { ar: 'الَّذِينَ آتَيْنَاهُمُ الْكِتَابَ يَتْلُونَهُ حَقَّ تِلَاوَتِهِ', id: 'Orang-orang yang telah Kami berikan Kitab kepadanya, mereka membacanya dengan bacaan yang sebenarnya.', ref: 'QS. Al-Baqarah: 121' },
+  { ar: 'هَٰذَا بَيَانٌ لِلنَّاسِ وَهُدًى وَمَوْعِظَةٌ لِلْمُتَّقِينَ', id: '(Al-Qur\'an) ini adalah penjelasan bagi seluruh manusia, petunjuk, dan pelajaran bagi orang-orang yang bertakwa.', ref: 'QS. Ali \'Imran: 138' },
+  { ar: 'كِتَابٌ أَنْزَلْنَاهُ إِلَيْكَ مُبَارَكٌ لِيَدَّبَّرُوا آيَاتِهِ', id: 'Kitab yang Kami turunkan kepadamu penuh berkah agar mereka menghayati ayat-ayatnya.', ref: 'QS. Sad: 29' },
+  { ar: 'يُقَالُ لِصَاحِبِ الْقُرْآنِ اقْرَأْ وَارْتَقِ وَرَتِّلْ', id: 'Dikatakan kepada pemilik (penghafal) Al-Qur\'an: bacalah, naiklah (derajatmu), dan tartilkanlah bacaanmu.', ref: 'HR. Abu Dawud & Tirmidzi' },
+  { ar: 'إِنَّ الَّذِينَ يَتْلُونَ كِتَابَ اللَّهِ وَأَقَامُوا الصَّلَاةَ تِجَارَةً لَنْ تَبُورَ', id: 'Sesungguhnya orang-orang yang membaca Kitabullah dan mendirikan shalat, mereka mengharapkan perniagaan yang tidak akan merugi.', ref: 'QS. Fatir: 29' },
+  { ar: 'وَمَنْ أَعْرَضَ عَنْ ذِكْرِي فَإِنَّ لَهُ مَعِيشَةً ضَنْكًا', id: 'Dan barangsiapa berpaling dari peringatan-Ku, maka sesungguhnya baginya penghidupan yang sempit.', ref: 'QS. Taha: 124' },
+  { ar: 'الرَّحْمَٰنُ عَلَّمَ الْقُرْآنَ', id: '(Allah) Yang Maha Pengasih, telah mengajarkan Al-Qur\'an.', ref: 'QS. Ar-Rahman: 1-2' },
+  { ar: 'وَيُعَلِّمُهُ الْكِتَابَ وَالْحِكْمَةَ', id: 'Dan Dia akan mengajarkan kepadanya Kitab dan hikmah.', ref: 'QS. Ali \'Imran: 48' },
+  { ar: 'مَثَلُ الَّذِي يَقْرَأُ الْقُرْآنَ وَهُوَ حَافِظٌ لَهُ مَعَ السَّفَرَةِ الْكِرَامِ الْبَرَرَةِ', id: 'Perumpamaan orang yang membaca Al-Qur\'an dan ia hafal dengannya, ia bersama para malaikat pencatat yang mulia lagi berbakti.', ref: 'HR. Bukhari & Muslim' },
+  { ar: 'ذَٰلِكَ الْكِتَابُ لَا رَيْبَ فِيهِ هُدًى لِلْمُتَّقِينَ', id: 'Kitab (Al-Qur\'an) ini tidak ada keraguan padanya, petunjuk bagi mereka yang bertakwa.', ref: 'QS. Al-Baqarah: 2' },
+{ ar: 'شَهْرُ رَمَضَانَ الَّذِي أُنْزِلَ فِيهِ الْقُرْآنُ', id: 'Bulan Ramadhan adalah bulan yang di dalamnya diturunkan Al-Qur\'an.', ref: 'QS. Al-Baqarah: 185' },
+{ ar: 'وَقُرْآنًا فَرَقْنَاهُ لِتَقْرَأَهُ عَلَى النَّاسِ عَلَىٰ مُكْثٍ', id: 'Dan Al-Qur\'an itu telah Kami turunkan secara berangsur-angsur agar kamu membacakannya kepada manusia secara perlahan-lahan.', ref: 'QS. Al-Isra: 106' },
+{ ar: 'وَإِنَّهُ لَتَنْزِيلُ رَبِّ الْعَالَمِينَ', id: 'Dan sesungguhnya Al-Qur\'an ini benar-benar diturunkan oleh Tuhan seluruh alam.', ref: 'QS. Asy-Syu\'ara: 192' },
+{ ar: 'اقْرَءُوا الْقُرْآنَ فَإِنَّهُ يَأْتِي يَوْمَ الْقِيَامَةِ شَفِيعًا لِأَصْحَابِهِ', id: 'Bacalah Al-Qur\'an, karena sesungguhnya ia akan datang pada hari kiamat sebagai pemberi syafaat bagi orang-orang yang membacanya.', ref: 'HR. Muslim' },
+{ ar: 'وَلَا تَعْجَلْ بِالْقُرْآنِ مِنْ قَبْلِ أَنْ يُقْضَىٰ إِلَيْكَ وَحْيُهُ', id: 'Dan janganlah engkau (Muhammad) tergesa-gesa (membaca) Al-Qur\'an sebelum selesai diwahyukan kepadamu.', ref: 'QS. Taha: 114' },
+{ ar: 'إِنَّ عَلَيْنَا جَمْعَهُ وَقُرْآنَهُ', id: 'Sesungguhnya Kami-lah yang akan mengumpulkannya (di dadamu) dan membacakannya.', ref: 'QS. Al-Qiyamah: 17' },
+{ ar: 'أَفَلَا يَتَدَبَّرُونَ الْقُرْآنَ أَمْ عَلَىٰ قُلُوبٍ أَقْفَالُهَا', id: 'Maka tidakkah mereka menghayati Al-Qur\'an ataukah hati mereka sudah terkunci?', ref: 'QS. Muhammad: 24' },
+{ ar: 'خَيْرُ الْبَيْتِ فِي الْمُسْلِمِينَ بَيْتٌ فِيهِ يَتِيمٌ يُحْسَنُ إِلَيْهِ', id: 'Sebaik-baik rumah kaum muslimin adalah rumah yang di dalamnya ada anak yatim yang diperlakukan dengan baik.', ref: 'HR. Ibnu Majah' },
+{ ar: 'الْمَاهِرُ بِالْقُرْآنِ مَعَ السَّفَرَةِ الْكِرَامِ الْبَرَرَةِ', id: 'Orang yang mahir membaca Al-Qur\'an akan bersama para malaikat pencatat yang mulia lagi berbakti.', ref: 'HR. Bukhari & Muslim' },
+];
 
 export default function OrtuBerandaPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   const [anakList, setAnakList] = useState<Child[]>([])
@@ -51,7 +82,7 @@ export default function OrtuBerandaPage() {
   const fetchChildProgress = useCallback(async (childId: string) => {
     setIsDataFetching(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getTodayString()
       const now = new Date()
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
       const sevenDaysAgo = new Date()

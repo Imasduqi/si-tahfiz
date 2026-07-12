@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef , useMemo} from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { logout } from '@/lib/actions/auth'
@@ -18,7 +18,7 @@ interface ProfileFormProps {
 
 export function ProfileForm({ role }: ProfileFormProps) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // State
   const [user, setUser] = useState<any>(null)
@@ -72,6 +72,15 @@ export function ProfileForm({ role }: ProfileFormProps) {
   // Button rounded settings
   const buttonRoundedProp = isOrangTua ? 'full' : (isPengampu || isKoordinator || isKepsek) ? 'lg' : 'md'
 
+  // Cleanup object URLs for photo preview
+  useEffect(() => {
+    return () => {
+      if (photoPreview) {
+        URL.revokeObjectURL(photoPreview)
+      }
+    }
+  }, [photoPreview])
+
   // Load Profile Data
   useEffect(() => {
     let active = true
@@ -95,14 +104,14 @@ export function ProfileForm({ role }: ProfileFormProps) {
           .from(table)
           .select('*')
           .eq('id', currentUser.id)
-          .single()
+          .maybeSingle()
 
         if (!active) return
 
-        if (error) {
-          console.error('Error fetching profile:', error)
+        if (error || !data) {
+          console.error('Error fetching profile:', error || 'Data not found')
           toast.error('Gagal memuat data profil')
-        } else if (data) {
+        } else {
           setProfileData(data)
           setNamaBaru(data.nama_lengkap)
         }
@@ -179,8 +188,12 @@ export function ProfileForm({ role }: ProfileFormProps) {
     
     // Simulate upload delay & create local preview
     setTimeout(() => {
-      const objectUrl = URL.createObjectURL(file)
-      setPhotoPreview(objectUrl)
+      setPhotoPreview((prev) => {
+        if (prev) {
+          URL.revokeObjectURL(prev)
+        }
+        return URL.createObjectURL(file)
+      })
       setIsUploadingPhoto(false)
       toast.success('Foto profil berhasil diunggah secara lokal')
     }, 1000)
@@ -229,6 +242,9 @@ export function ProfileForm({ role }: ProfileFormProps) {
         toast.error('Password lama tidak sesuai')
         return
       }
+
+      // Immediately restore/refresh the original session to avoid cookie conflicts
+      await supabase.auth.refreshSession()
 
       // Step 2: update to new password
       const { error: updateError } = await supabase.auth.updateUser({

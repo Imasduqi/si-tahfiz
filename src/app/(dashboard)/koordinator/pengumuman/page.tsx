@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Button } from '@/components/ui/button'
@@ -9,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
 import { Table, TableColumn } from '@/components/ui/table'
 import { toast } from 'sonner'
-import { Trash2, Plus, Volume2 } from 'lucide-react'
+import { Trash2, Plus } from 'lucide-react'
 
 interface PengumumanWithAuthor {
   id: string
@@ -40,7 +41,8 @@ const ROLE_BADGE_VARIANTS: Record<string, 'success' | 'warning' | 'danger' | 'in
 }
 
 export default function KoordinatorPengumumanPage() {
-  const supabase = createClient()
+  const router = useRouter()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser } = useUser()
 
   // Data States
@@ -85,8 +87,10 @@ export default function KoordinatorPengumumanPage() {
   }
 
   useEffect(() => {
-    fetchPengumuman()
-  }, [])
+    if (currentUser) {
+      fetchPengumuman()
+    }
+  }, [currentUser])
 
   // Create Announcement handler
   const handleCreate = async (e: React.FormEvent) => {
@@ -105,11 +109,17 @@ export default function KoordinatorPengumumanPage() {
 
     setSubmitting(true)
     try {
+      if (!currentUser) {
+        toast.error('Sesi Anda telah berakhir, silakan login kembali')
+        router.push('/login/staff')
+        return
+      }
+
       const { error } = await supabase.from('pengumuman').insert({
         judul: judul.trim(),
         isi: isi.trim(),
         target_role: roles,
-        dibuat_oleh: currentUser!.id
+        dibuat_oleh: currentUser.id
       })
 
       if (error) throw error

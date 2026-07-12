@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
@@ -14,14 +14,28 @@ import { LoadingSkeleton, SkeletonTable } from '@/components/ui/loading-skeleton
 import { toast } from 'sonner'
 import { Edit3, Info, Heart } from 'lucide-react'
 import { Santri, Halaqah, Konfigurasi, Akhlaq } from '@/types'
+import { getTodayString } from '@/lib/utils'
 
 interface SantriWithAkhlaq extends Santri {
   akhlaqRecord?: Akhlaq
 }
 
+function getCurrentTahunAjaran(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() + 1 // 1-12
+
+  // Academic year starts in July (month 7)
+  if (month >= 7) {
+    return `${year}/${year + 1}`
+  } else {
+    return `${year - 1}/${year}`
+  }
+}
+
 export default function PengampuAkhlaqPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, isLoading: userLoading } = useUser()
 
   const [isAkhlaqActive, setIsAkhlaqActive] = useState<boolean | null>(null)
@@ -31,7 +45,7 @@ export default function PengampuAkhlaqPage() {
 
   // Filters State
   const [selectedSemester, setSelectedSemester] = useState<'ganjil' | 'genap'>('ganjil')
-  const [selectedTahunAjaran, setSelectedTahunAjaran] = useState('2025/2026')
+  const [selectedTahunAjaran, setSelectedTahunAjaran] = useState(getCurrentTahunAjaran())
   const [availableYears, setAvailableYears] = useState<string[]>([])
 
   // Modal States
@@ -58,7 +72,7 @@ export default function PengampuAkhlaqPage() {
   // Resolve semester & school year
   const resolveCurrentSemesterAndYear = (config: Konfigurasi | null) => {
     const now = new Date()
-    const todayStr = now.toISOString().split('T')[0]
+    const todayStr = getTodayString()
     const currentYear = now.getFullYear()
 
     if (config) {

@@ -27,11 +27,11 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
         style={{
           background: '#FFFFFF',
           border: '1px solid #E0EDE0',
-          boxShadow: activeShadow === 'md'
-            ? '0 4px 20px rgba(34,139,34,0.08), 0 1px 4px rgba(0,0,0,0.04)'
-            : activeShadow === 'sm'
-              ? '0 2px 8px rgba(34,139,34,0.06), 0 1px 2px rgba(0,0,0,0.03)'
-              : '0 1px 4px rgba(34,139,34,0.05)',
+          boxShadow: activeShadow === 'none'
+            ? 'none'
+            : activeShadow === 'md'
+              ? '0 4px 20px rgba(34,139,34,0.08), 0 1px 4px rgba(0,0,0,0.04)'
+              : '0 2px 8px rgba(34,139,34,0.06), 0 1px 2px rgba(0,0,0,0.03)',
           ...style,
         }}
         ref={ref}

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
@@ -19,7 +19,7 @@ interface AuditTrailRecord {
 }
 
 export default function TuSistemAuditPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // State
   const [auditLogs, setAuditLogs] = useState<AuditTrailRecord[]>([])

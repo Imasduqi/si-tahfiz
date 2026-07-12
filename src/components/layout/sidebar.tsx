@@ -45,6 +45,7 @@ export function Sidebar({ items, isCollapsed, onToggle }: SidebarProps) {
               href={item.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group relative overflow-hidden animate-fade-in-up",
+                !isActive && "hover:bg-[#F0F7F0] hover:text-[#228B22]"
               )}
               style={{
                 animationDelay: `${index * 50}ms`,
@@ -53,18 +54,6 @@ export function Sidebar({ items, isCollapsed, onToggle }: SidebarProps) {
                   ? '#228B22'
                   : 'transparent',
                 boxShadow: isActive ? '0 4px 16px rgba(34,139,34,0.3)' : 'none',
-              }}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  (e.currentTarget as HTMLElement).style.background = '#F0F7F0'
-                  ;(e.currentTarget as HTMLElement).style.color = '#228B22'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  (e.currentTarget as HTMLElement).style.background = 'transparent'
-                  ;(e.currentTarget as HTMLElement).style.color = '#4A6B4A'
-                }
               }}
             >
               <Icon className={cn(
@@ -97,11 +86,9 @@ export function Sidebar({ items, isCollapsed, onToggle }: SidebarProps) {
       <div className="p-3" style={{ borderTop: '1px solid #E0EDE0' }}>
         <button
           onClick={onToggle}
-          className="flex items-center justify-center p-2.5 rounded-xl transition-all duration-200 w-full group"
+          className="flex items-center justify-center p-2.5 rounded-xl transition-all duration-200 w-full group hover:bg-[#F0F7F0] hover:text-[#228B22]"
           style={{ color: '#6B8B6B' }}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#F0F7F0'; (e.currentTarget as HTMLElement).style.color = '#228B22' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#6B8B6B' }}
         >
           {isCollapsed ? (
             <ChevronRight className="w-5 h-5" />

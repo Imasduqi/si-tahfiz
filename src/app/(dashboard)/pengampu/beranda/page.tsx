@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback , useMemo} from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/use-user'
 import { Card } from '@/components/ui/card'
@@ -15,7 +15,7 @@ import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
 import { PullIndicator } from '@/components/ui/pull-indicator'
 
 export default function PengampuBerandaPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { user: currentUser, profile, isLoading: userLoading } = useUser()
 
   const [halaqah, setHalaqah] = useState<{ id: string; nama_halaqah: string; grade: string } | null>(null)

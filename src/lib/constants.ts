@@ -1,13 +1,7 @@
-export const ROLES = {
-  TU: 'tu',
-  KOORDINATOR: 'koordinator',
-  PENGAMPU: 'pengampu',
-  KEPSEK: 'kepsek',
-  ORTU: 'ortu',
-} as const
-
-export const GRADES = {
-  TAHSIN: 'tahsin',
-  TAKMIL: 'takmil',
-  TAHFIZ: 'tahfiz',
-} as const
+export const ROLE_HOME_PATHS: Record<string, string> = {
+  tu: '/tu/akun',
+  koordinator: '/koordinator/beranda',
+  pengampu: '/pengampu/beranda',
+  orang_tua: '/ortu/beranda',
+  kepsek: '/kepsek/dashboard',
+}

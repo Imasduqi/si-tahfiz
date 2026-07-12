@@ -18,8 +18,8 @@ export default function OrtuLayout({
   ]
 
   return (
-    <RoleStyleProvider role="ortu">
-      <DashboardShell navItems={navItems} role="ortu">
+    <RoleStyleProvider role="orang_tua">
+      <DashboardShell navItems={navItems} role="orang_tua">
         {children}
       </DashboardShell>
     </RoleStyleProvider>
