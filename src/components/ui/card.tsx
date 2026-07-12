@@ -20,13 +20,11 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     return (
       <div
         className={cn(
-          "rounded-2xl transition-all",
+          "rounded-2xl transition-all bg-white border border-[#E0EDE0]",
           shadowStyles[activeShadow],
           className
         )}
         style={{
-          background: '#FFFFFF',
-          border: '1px solid #E0EDE0',
           boxShadow: activeShadow === 'none'
             ? 'none'
             : activeShadow === 'md'
