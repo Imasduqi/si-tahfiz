@@ -10,8 +10,9 @@ import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
 export default function PengampuLainnyaPage() {
   const [isAkhlaqActive, setIsAkhlaqActive] = useState<boolean | null>(null)
 
+  const supabase = useMemo(() => createClient(), [])
+
   useEffect(() => {
-    const supabase = useMemo(() => createClient(), [])
     async function fetchConfig() {
       try {
         const { data, error } = await supabase
@@ -28,7 +29,8 @@ export default function PengampuLainnyaPage() {
       }
     }
     fetchConfig()
-  }, [])
+  }, [supabase])
+
 
   const baseMenus = [
     { label: 'Tikrar & Manzil', href: '/pengampu/tikrar', icon: RefreshCw, desc: 'Lihat status Tikrar dan Manzil seluruh santri halaqah' },
