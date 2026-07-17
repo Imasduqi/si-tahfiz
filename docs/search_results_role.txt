@@ -1,0 +1,6 @@
+﻿
+Path                                                 LineNumber Line                                                   
+----                                                 ---------- ----                                                   
+E:\dpsi proyek akhir\si-tahfiz\src\types\database.ts          1 export type Role = 'tu' | 'koordinator' | 'pengampu'...
+
+
