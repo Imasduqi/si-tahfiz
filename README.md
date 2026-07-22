@@ -6,6 +6,27 @@ Aplikasi ini bersifat **Mobile-First** dan mendukung 5 jenis pengguna (Role): **
 
 ---
 
+## 👥 Tim Pengembang
+
+**Kelompok 404 Not Found**
+
+| Nama | NIM | Peran / Kontribusi |
+|------|-----|--------------------|
+| Imam Faqih Masduqi | 2400016067 | Koordinator penyusunan draf utama dan finalisasi kelengkapan dokumen |
+| Ahmad Raka Putra Pratama | 2400016089 | Penyiapan kerangka dokumen dan penyusunan file pendukung laporan |
+| Dadan Julianto | 2400016070 | Dokumentasi audio dan ekstraksi poin-poin penting dari wawancara |
+| Franchisco Dabutar | 2400016081 | Analisis data temuan lapangan dan penyelarasan alur logika (traceability) |
+| Mohammed Rashed Mansoor | 2406016105 | Dokumentasi visual dan pengumpulan artefak untuk bukti validasi lapangan |
+
+---
+
+## 🌐 Link Proyek
+
+- 🚀 **URL Aplikasi (Deploy):** [https://si-tahfiz.vercel.app/](https://si-tahfiz.vercel.app/)
+- 📦 **URL Repository GitHub:** [https://github.com/Imasduqi/si-tahfiz](https://github.com/Imasduqi/si-tahfiz)
+
+---
+
 ## 🏗️ Struktur & Dokumentasi Proyek
 
 Proyek ini sangat terdokumentasi dengan baik. Seluruh *blueprint* arsitektur dan spesifikasi aplikasi berada di direktori *root* (di luar folder aplikasi utama `si-tahfiz/`). 
@@ -48,7 +69,7 @@ Berikut adalah peta dokumentasi proyek:
 
 **1. Clone dan Install Dependencies:**
 ```bash
-git clone <repo-url>
+git clone https://github.com/Imasduqi/si-tahfiz
 cd si-tahfiz
 npm install
 ```
