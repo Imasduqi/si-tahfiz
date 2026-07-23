@@ -282,6 +282,245 @@ classDiagram
 ```
 
 ---
+### 2.6 Struktur Database Lengkap
+
+Diagram berikut menampilkan seluruh 26 tabel beserta relasi antar tabel secara menyeluruh, sebagai gambaran utuh struktur database SI-Tahfiz.
+
+```mermaid
+classDiagram
+    class profiles {
+        +UUID id PK
+        +string nama_lengkap
+        +role_enum role
+        +string email
+        +timestamp created_at
+    }
+    class orang_tua {
+        +UUID id PK
+        +string nama_lengkap
+        +string nomor_hp
+        +timestamp created_at
+    }
+    class halaqah {
+        +UUID id PK
+        +string nama_halaqah
+        +grade_enum grade
+        +UUID pengampu_id FK
+        +timestamp created_at
+    }
+    class santri {
+        +UUID id PK
+        +string nama_lengkap
+        +string kelas
+        +grade_enum grade
+        +UUID halaqah_id FK
+        +UUID orang_tua_id FK
+        +timestamp created_at
+    }
+    class setoran {
+        +UUID id PK
+        +UUID santri_id FK
+        +tipe_setoran_enum tipe
+        +date tanggal
+        +int jumlah_baris
+        +int halaman_awal
+        +int halaman_akhir
+        +int jumlah_kesalahan
+        +status_setoran_enum status
+        +UUID input_oleh FK
+        +timestamp created_at
+        +timestamp updated_at
+    }
+    class tikrar {
+        +UUID id PK
+        +UUID santri_id FK
+        +date tanggal
+        +string surah
+        +status_tikrar_enum status
+        +timestamp diselesaikan_pengampu_at
+        +timestamp dialihkan_rumah_at
+        +timestamp diselesaikan_ortu_at
+        +timestamp created_at
+    }
+    class absensi {
+        +UUID id PK
+        +UUID santri_id FK
+        +date tanggal
+        +status_absensi_enum status
+        +timestamp created_at
+    }
+    class ukj {
+        +UUID id PK
+        +UUID santri_id FK
+        +UUID pengampu_id FK
+        +int nomor_juz
+        +int nilai
+        +status_ukj_santri_enum status_santri
+        +status_approval_enum status_approval
+        +string alasan_penolakan
+        +UUID approved_by FK
+        +timestamp approved_at
+        +timestamp created_at
+    }
+    class uas {
+        +UUID id PK
+        +UUID santri_id FK
+        +UUID pengampu_id FK
+        +semester_enum semester
+        +string tahun_ajaran
+        +numeric nilai_akhir
+        +timestamp created_at
+        +timestamp updated_at
+    }
+    class uas_detail {
+        +UUID id PK
+        +UUID uas_id FK
+        +int nomor_juz
+        +int nilai
+        +timestamp created_at
+    }
+    class akhlaq {
+        +UUID id PK
+        +UUID santri_id FK
+        +UUID pengampu_id FK
+        +semester_enum semester
+        +string tahun_ajaran
+        +int nilai
+        +timestamp created_at
+        +timestamp updated_at
+    }
+    class konfigurasi {
+        +UUID id PK
+        +int bobot_setoran
+        +int bobot_uas
+        +int bobot_akhlaq
+        +int bobot_kehadiran
+        +date tanggal_mulai_ganjil
+        +date tanggal_selesai_ganjil
+        +date tanggal_mulai_genap
+        +date tanggal_selesai_genap
+        +boolean fitur_akhlaq_aktif
+        +boolean maintenance_mode
+        +timestamp updated_at
+    }
+    class hari_libur {
+        +UUID id PK
+        +date tanggal
+        +string keterangan
+        +timestamp created_at
+    }
+    class target_grade {
+        +UUID id PK
+        +grade_enum grade
+        +tipe_setoran_enum tipe_setoran
+        +int target_min
+        +int target_max
+        +timestamp updated_at
+    }
+    class target_syahrul_quran {
+        +UUID id PK
+        +grade_enum grade
+        +int target_min
+        +int target_max
+        +timestamp updated_at
+    }
+    class syahrul_quran {
+        +UUID id PK
+        +date tanggal_mulai
+        +date tanggal_selesai
+        +UUID dibuat_oleh FK
+        +timestamp created_at
+    }
+    class pekan_murajaah {
+        +UUID id PK
+        +date tanggal_mulai
+        +date tanggal_selesai
+        +UUID dibuat_oleh FK
+        +timestamp created_at
+    }
+    class target_murajaah {
+        +UUID id PK
+        +UUID pekan_murajaah_id FK
+        +UUID halaqah_id FK
+        +int target_baris_per_hari
+        +timestamp created_at
+    }
+    class percakapan {
+        +UUID id PK
+        +UUID santri_id FK
+        +UUID pengampu_id FK
+        +UUID ortu_id FK
+        +timestamp created_at
+    }
+    class pesan {
+        +UUID id PK
+        +UUID percakapan_id FK
+        +UUID pengirim_id FK
+        +string isi
+        +timestamp created_at
+    }
+    class pengumuman {
+        +UUID id PK
+        +string judul
+        +string isi
+        +string[] target_role
+        +UUID dibuat_oleh FK
+        +timestamp created_at
+    }
+    class pengumuman_read {
+        +UUID id PK
+        +UUID pengumuman_id FK
+        +UUID user_id FK
+        +timestamp read_at
+    }
+    class berita_login {
+        +UUID id PK
+        +string judul
+        +string isi
+        +UUID dibuat_oleh FK
+        +timestamp created_at
+        +timestamp updated_at
+    }
+    class audit_trail {
+        +UUID id PK
+        +UUID user_id FK
+        +string aktivitas
+        +timestamp created_at
+    }
+    class push_subscriptions {
+        +UUID id PK
+        +UUID user_id FK
+        +string endpoint
+        +string p256dh
+        +string auth_key
+        +timestamp created_at
+    }
+    class mobile_push_tokens {
+        +UUID id PK
+        +UUID user_id FK
+        +string fcm_token
+        +string platform
+        +timestamp created_at
+    }
+
+    profiles "1" --> "*" halaqah : mengelola
+    halaqah "1" --> "*" santri : berisi
+    orang_tua "1" --> "*" santri : wali
+    santri "1" --> "*" setoran : memiliki
+    santri "1" --> "*" tikrar : memiliki
+    santri "1" --> "*" absensi : memiliki
+    santri "1" --> "*" ukj : diujikan
+    santri "1" --> "*" uas : diujikan
+    uas "1" --> "*" uas_detail : memiliki
+    santri "1" --> "*" akhlaq : dinilai
+    pekan_murajaah "1" --> "*" target_murajaah : memiliki
+    halaqah "1" --> "*" target_murajaah : ditargetkan
+    percakapan "1" --> "*" pesan : berisi
+    pengumuman "1" --> "*" pengumuman_read : dibaca
+    santri "1" --> "1" percakapan : dibicarakan
+    profiles "1" --> "*" percakapan : terlibat
+    orang_tua "1" --> "*" percakapan : terlibat
+```
 
 ## 3. Entity Descriptions
 
