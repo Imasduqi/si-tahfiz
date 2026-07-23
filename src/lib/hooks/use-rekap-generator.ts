@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { generateRekapExcel } from '@/lib/excel/generate-rekap'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
-import { Konfigurasi } from '@/types'
+import { Konfigurasi, UasDetail } from '@/types'
 
 function isValidTahunAjaran(value: string): { valid: boolean; error?: string } {
   const formatMatch = /^\d{4}\/\d{4}$/.test(value)
@@ -126,7 +126,7 @@ export function useRekapGenerator() {
       const uasList = uasRes.data || []
       const uasIds = uasList.map(u => u.id)
       
-      let uasDetailList: any[] = []
+      let uasDetailList: UasDetail[] = []
       if (uasIds.length > 0) {
         const { data, error } = await supabase
           .from('uas_detail')
@@ -134,7 +134,7 @@ export function useRekapGenerator() {
           .in('uas_id', uasIds)
         
         if (error) throw error
-        uasDetailList = data || []
+        uasDetailList = (data as UasDetail[]) || []
       }
 
       // Generate excel

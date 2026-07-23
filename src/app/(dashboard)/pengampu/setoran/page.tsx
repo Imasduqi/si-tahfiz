@@ -28,15 +28,11 @@ export default function PengampuSetoranPage() {
   const [setoranList, setSetoranList] = useState<Setoran[]>([])
   const [isSyahrulQuran, setIsSyahrulQuran] = useState<boolean>(false)
   const [isPageLoading, setIsPageLoading] = useState<boolean>(true)
-  const [isDataFetching, setIsDataFetching] = useState<boolean>(false)
   const [isDataReady, setIsDataReady] = useState<boolean>(false)
 
   // Pekan Murajaah States
   const [isPekanMurajaah, setIsPekanMurajaah] = useState<boolean>(false)
-  const [pekanMurajaahId, setPekanMurajaahId] = useState<string | null>(null)
   const [targetMurojaah, setTargetMurojaah] = useState<number | null>(null)
-  const [inputTargetVal, setInputTargetVal] = useState<string>('')
-  const [isSavingTarget, setIsSavingTarget] = useState<boolean>(false)
 
   // Murojaah Form Field States
   const [murojaahJumlahBaris, setMurojaahJumlahBaris] = useState<string>('')
@@ -66,35 +62,7 @@ export default function PengampuSetoranPage() {
   const [isSaving, setIsSaving] = useState<boolean>(false)
 
 
-  const handleSaveTarget = async () => {
-    if (!pekanMurajaahId || !halaqah || !inputTargetVal) return
-    const targetVal = parseInt(inputTargetVal, 10)
-    if (isNaN(targetVal) || targetVal <= 0) {
-      toast.error('Target baris harus lebih besar dari 0')
-      return
-    }
 
-    setIsSavingTarget(true)
-    try {
-      const { error } = await supabase
-        .from('target_murajaah')
-        .upsert({
-          pekan_murajaah_id: pekanMurajaahId,
-          halaqah_id: halaqah.id,
-          target_baris_per_hari: targetVal
-        }, { onConflict: 'pekan_murajaah_id,halaqah_id' })
-
-      if (error) throw error
-
-      toast.success('Target murajaah berhasil disimpan')
-      setTargetMurojaah(targetVal)
-    } catch (err) {
-      console.error('Save target error:', err)
-      toast.error('Gagal menyimpan target murajaah')
-    } finally {
-      setIsSavingTarget(false)
-    }
-  }
 
   // Check Syahrul Quran & Fetch Halaqah + Santri list (Run once when user is loaded)
   const fetchData = useCallback(async () => {
@@ -158,7 +126,6 @@ export default function PengampuSetoranPage() {
     }
 
     setIsDataReady(false)
-    setIsDataFetching(true)
     try {
       const santriIds = santriList.map(s => s.id)
 
@@ -172,7 +139,6 @@ export default function PengampuSetoranPage() {
 
       const isPekanMurajaahActive = !!pekanRes.data
       setIsPekanMurajaah(isPekanMurajaahActive)
-      setPekanMurajaahId(pekanRes.data?.id ?? null)
 
       let targetVal: number | null = null
       if (isPekanMurajaahActive && halaqah && pekanRes.data) {
@@ -186,7 +152,6 @@ export default function PengampuSetoranPage() {
         targetVal = targetData?.target_baris_per_hari ?? null
       }
       setTargetMurojaah(targetVal)
-      setInputTargetVal(targetVal ? targetVal.toString() : '')
 
       if (setoranRes.error) throw setoranRes.error
       setSetoranList(setoranRes.data || [])
@@ -195,7 +160,6 @@ export default function PengampuSetoranPage() {
       toast.error('Gagal mengambil data setoran harian')
     } finally {
       setIsDataReady(true)
-      setIsDataFetching(false)
     }
   }, [currentUser, santriList, supabase, halaqah])
 

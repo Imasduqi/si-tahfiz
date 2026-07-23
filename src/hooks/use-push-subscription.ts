@@ -29,7 +29,7 @@ export function usePushSubscription(role: string) {
 
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: applicationServerKey as any // cast to any to resolve TS mismatch with ArrayBufferLike
+          applicationServerKey: applicationServerKey as unknown as BufferSource
         })
 
         const subJson = subscription.toJSON()

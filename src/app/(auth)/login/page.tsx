@@ -199,7 +199,7 @@ export default function OrtuLoginPage() {
         .select('judul, isi, created_at, id')
         .order('created_at', { ascending: false })
         .limit(5)
-      setBeritaList((data as any) ?? [])
+      setBeritaList((data as unknown as BeritaLogin[]) ?? [])
       setLoadingBerita(false)
     }
     fetchBerita()

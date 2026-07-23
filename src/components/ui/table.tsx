@@ -65,13 +65,12 @@ export function Table({
         <tbody className="bg-white divide-y divide-[#E5E7EB]">
           {data.map((row, rowIndex) => (
             <tr
-              key={getRowKey ? getRowKey(row, rowIndex) : ((row as any).id ?? `row-${rowIndex}`)}
+              key={getRowKey ? getRowKey(row, rowIndex) : (typeof row === 'object' && row !== null && 'id' in row && (row as Record<string, unknown>).id ? String((row as Record<string, unknown>).id) : `row-${rowIndex}`)}
               className="hover:bg-[#F9FAFB] transition-colors border-b border-[#E5E7EB] last:border-0"
             >
               {columns.map((col) => (
                 <td key={col.key} className="px-4 py-3 text-[#111827] text-[14px] align-middle whitespace-nowrap">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {col.render ? col.render(row, rowIndex) : (row as any)[col.key]}
+                  {col.render ? col.render(row, rowIndex) : ((row as Record<string, unknown>)[col.key] as React.ReactNode)}
                 </td>
               ))}
             </tr>

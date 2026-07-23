@@ -130,7 +130,6 @@ export function generateRekapSyahrulQuranExcel(params: GenerateSyahrulQuranParam
     ]
 
     // Freeze first 3 columns and 4 header rows
-    // @ts-ignore — xlsx freeze pane
     wsMain['!freeze'] = { xSplit: 3, ySplit: 4 }
 
     const sheetName = halaqah.nama_halaqah.substring(0, 31)

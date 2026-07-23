@@ -7,10 +7,11 @@ import { logout } from '@/lib/actions/auth'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
-import { UserCircle, Mail, Phone, Calendar, KeyRound, User as UserIcon, Edit2, LogOut, Camera } from 'lucide-react'
+import { UserCircle, KeyRound, User as UserIcon, Edit2, LogOut, Camera } from 'lucide-react'
 import { toast } from 'sonner'
+import type { User } from '@supabase/supabase-js'
+import type { Profile, OrangTua } from '@/types'
 
 interface ProfileFormProps {
   role: 'tu' | 'koordinator' | 'pengampu' | 'kepsek' | 'orang_tua'
@@ -21,8 +22,8 @@ export function ProfileForm({ role }: ProfileFormProps) {
   const supabase = useMemo(() => createClient(), [])
 
   // State
-  const [user, setUser] = useState<any>(null)
-  const [profileData, setProfileData] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profileData, setProfileData] = useState<(Profile | OrangTua) | null>(null)
   const [loading, setLoading] = useState(true)
   
   // Profile Photo state
@@ -60,7 +61,6 @@ export function ProfileForm({ role }: ProfileFormProps) {
   const isOrangTua = role === 'orang_tua'
 
   const cardPadding = isTu ? 'p-4 md:p-4' : 'p-6 md:p-6'
-  const spacingClass = isTu ? 'space-y-4' : 'space-y-6'
   
   // Shadow styles and border radius for Cards
   const cardShadowStyle = isTu 
@@ -112,7 +112,7 @@ export function ProfileForm({ role }: ProfileFormProps) {
           console.error('Error fetching profile:', error || 'Data not found')
           toast.error('Gagal memuat data profil')
         } else {
-          setProfileData(data)
+          setProfileData(data as Profile | OrangTua)
           setNamaBaru(data.nama_lengkap)
         }
       } catch (err) {
@@ -135,6 +135,11 @@ export function ProfileForm({ role }: ProfileFormProps) {
   // Handle Name Update
   const handleUpdateNama = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!user) {
+      toast.error('Sesi pengguna tidak valid')
+      return
+    }
 
     if (!namaBaru.trim() || namaBaru.trim().length < 2) {
       toast.error('Nama lengkap minimal 2 karakter')
@@ -161,7 +166,7 @@ export function ProfileForm({ role }: ProfileFormProps) {
       }
 
       toast.success('Nama berhasil diperbarui')
-      setProfileData((prev: any) => ({ ...prev, nama_lengkap: namaBaru.trim() }))
+      setProfileData((prev) => (prev ? { ...prev, nama_lengkap: namaBaru.trim() } : null))
       
       // Refresh local state and layouts (like topbar name displays)
       router.refresh()
@@ -388,12 +393,12 @@ export function ProfileForm({ role }: ProfileFormProps) {
           {isOrangTua ? (
             <div className="bg-white/10 border border-white/20 rounded-2xl p-3.5 backdrop-blur-sm">
               <p className="text-emerald-300/70 text-[10px] font-bold uppercase tracking-wider mb-1">Nomor HP</p>
-              <p className="text-white font-bold text-sm">{profileData?.nomor_hp || '-'}</p>
+              <p className="text-white font-bold text-sm">{(profileData && 'nomor_hp' in profileData && profileData.nomor_hp) || '-'}</p>
             </div>
           ) : (
             <div className="bg-white/10 border border-white/20 rounded-2xl p-3.5 backdrop-blur-sm">
               <p className="text-emerald-300/70 text-[10px] font-bold uppercase tracking-wider mb-1">Email</p>
-              <p className="text-white font-bold text-sm truncate">{profileData?.email || '-'}</p>
+              <p className="text-white font-bold text-sm truncate">{(profileData && 'email' in profileData && profileData.email) || '-'}</p>
             </div>
           )}
           <div className="bg-white/10 border border-white/20 rounded-2xl p-3.5 backdrop-blur-sm">
