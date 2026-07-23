@@ -245,7 +245,7 @@ export default function OrtuLoginPage() {
 
             {/* Header */}
             <div className="mb-7">
-              <h2 className="text-2xl font-extrabold mb-1" style={{ color: '#1C3B1C' }}>Selamat Datang 👋</h2>
+              <h2 className="text-2xl font-extrabold mb-1" style={{ color: '#1C3B1C' }}>Selamat Datang </h2>
               <p className="text-sm font-medium" style={{ color: '#6B8B6B' }}>
                 Masuk sebagai <span className="font-bold" style={{ color: '#228B22' }}>Orang Tua / Wali</span>
               </p>
