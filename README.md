@@ -107,4 +107,4 @@ Aplikasi dapat diakses melalui `http://localhost:3000`.
 ## 🔒 Login Info
 Setelah *setup*, masuklah menggunakan akun TU yang telah dibuat secara manual. Untuk menjaga integritas sistem, semua akun pengguna berikutnya (Kepsek, Koordinator, Pengampu, Orang Tua) hanya dapat dibuat, diatur, dan dikontrol eksklusif melalui dasbor **Staff TU**.
 
-(Khusus Orang Tua login menggunakan Nomor HP, dengan *password default* format: `TAHFIZ_{nomorHP}`).
+(Khusus Orang Tua login menggunakan Nomor HP, dengan *password default* format: `TAHFIZ_{nomorHP}`)
