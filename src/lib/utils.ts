@@ -18,18 +18,15 @@ export function formatDateShort(date: string): string {
 }
 
 export function getTodayString(): string {
-  const now = new Date()
-  // Convert to WIB (UTC+7) explicitly rather than relying on server/browser local timezone,
-  // since this must be consistent whether running on a server (which may be UTC) or a
-  // user's browser (which may be in any timezone if they're traveling, etc.)
-  const wibOffset = 7 * 60 // minutes
-  const wibDate = new Date(now.getTime() + wibOffset * 60 * 1000)
-
-  const year = wibDate.getUTCFullYear()
-  const month = String(wibDate.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(wibDate.getUTCDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
+  // Use Intl.DateTimeFormat for reliable WIB (Asia/Jakarta, UTC+7) date formatting,
+  // consistent across server (UTC) and browser (any timezone)
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  return formatter.format(new Date()) // returns YYYY-MM-DD format
 }
 
 export function isWeekday(date: Date): boolean {

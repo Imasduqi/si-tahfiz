@@ -215,17 +215,25 @@ export async function updateUserAction(data: {
       return { success: false, error: 'Tidak memiliki izin untuk melakukan aksi ini' }
     }
 
-    // 2. Perform update on corresponding table — use adminSupabase to bypass RLS
-    if (data.role === 'orang_tua') {
+    // 2. Determine actual table from database — don't trust client-supplied role
+    const { data: profileRecord } = await adminSupabase
+      .from('profiles')
+      .select('id')
+      .eq('id', data.id)
+      .maybeSingle()
+
+    if (profileRecord) {
+      // User exists in profiles table (internal role)
       const { error } = await adminSupabase
-        .from('orang_tua')
+        .from('profiles')
         .update({ nama_lengkap: data.nama_lengkap.trim() })
         .eq('id', data.id)
 
       if (error) return { success: false, error: error.message }
     } else {
+      // User must be in orang_tua table
       const { error } = await adminSupabase
-        .from('profiles')
+        .from('orang_tua')
         .update({ nama_lengkap: data.nama_lengkap.trim() })
         .eq('id', data.id)
 
@@ -311,12 +319,20 @@ export async function deleteUserAction(data: {
       return { success: false, error: 'Anda tidak dapat menghapus akun Anda sendiri.' }
     }
 
-    // 2. Delete user in Auth (cascade delete handles database row deletion automatically)
+    // 2. Determine actual role from database before deletion for accurate audit
+    const { data: targetProfile } = await adminSupabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.id)
+      .maybeSingle()
+
+    const roleLabel = targetProfile ? targetProfile.role.toUpperCase() : 'Orang Tua'
+
+    // 3. Delete user in Auth (cascade delete handles database row deletion automatically)
     const { error } = await adminSupabase.auth.admin.deleteUser(data.id)
     if (error) return { success: false, error: error.message }
 
-    // 3. Write to audit_trail — use adminSupabase to bypass RLS
-    const roleLabel = data.role === 'orang_tua' ? 'Orang Tua' : data.role.toUpperCase()
+    // 4. Write to audit_trail — use adminSupabase to bypass RLS
     await adminSupabase.from('audit_trail').insert({
       user_id: currentUser.id,
       aktivitas: `Hapus akun: ${data.nama_lengkap} (${roleLabel})`

@@ -48,6 +48,9 @@ export async function bulkCreateOrangTua(rows: ImportPayload[]): Promise<ImportR
 
   const adminClient = await createAdminClient()
 
+  // Collect audit trail entries for batch insert after processing
+  const auditEntries: { user_id: string; aktivitas: string }[] = []
+
   // Process rows sequentially to avoid overwhelming Supabase Auth API
   for (const row of rows) {
     try {
@@ -90,8 +93,8 @@ export async function bulkCreateOrangTua(rows: ImportPayload[]): Promise<ImportR
         continue
       }
 
-      // Audit trail entry
-      await adminClient.from('audit_trail').insert({
+      // Collect audit trail entry for batch insert
+      auditEntries.push({
         user_id: currentUser.id,
         aktivitas: `[Import Massal] Tambah akun: ${row.namaLengkap} (Orang Tua)`,
       })
@@ -105,6 +108,11 @@ export async function bulkCreateOrangTua(rows: ImportPayload[]): Promise<ImportR
         reason: String(err),
       })
     }
+  }
+
+  // Batch insert all audit trail entries at once to reduce network roundtrips
+  if (auditEntries.length > 0) {
+    await adminClient.from('audit_trail').insert(auditEntries)
   }
 
   return results

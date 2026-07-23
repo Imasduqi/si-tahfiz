@@ -94,13 +94,10 @@ export async function loginWithEmail(
   await setRoleCookie(role)
 
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('audit_trail').insert({
-        user_id: user.id,
-        aktivitas: `Login sebagai ${profile.role} — ${email}`
-      })
-    }
+    await supabase.from('audit_trail').insert({
+      user_id: data.user.id,
+      aktivitas: `Login sebagai ${profile.role} — ${email}`
+    })
   } catch {
     // silently ignore — login must not fail because of audit logging
   }
@@ -163,13 +160,10 @@ export async function loginWithPhone(
   await setRoleCookie('orang_tua')
 
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('audit_trail').insert({
-        user_id: user.id,
-        aktivitas: `Login sebagai orang_tua — ${nomorHP}`
-      })
-    }
+    await supabase.from('audit_trail').insert({
+      user_id: authData.user.id,
+      aktivitas: `Login sebagai orang_tua — ${nomorHP}`
+    })
   } catch {
     // silently ignore — login must not fail because of audit logging
   }

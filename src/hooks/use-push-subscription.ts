@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect , useMemo} from 'react'
+import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { urlBase64ToUint8Array } from '@/lib/utils/vapid'
 
@@ -35,7 +35,7 @@ export function usePushSubscription(role: string) {
         const subJson = subscription.toJSON()
         if (!subJson.endpoint || !subJson.keys?.p256dh || !subJson.keys?.auth) return
 
-        const supabase = useMemo(() => createClient(), [])
+        const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
