@@ -16,7 +16,7 @@ Aplikasi ini bersifat **Mobile-First** dan mendukung 5 jenis pengguna (Role): **
 | Ahmad Raka Putra Pratama | 2400016089 | Penyiapan kerangka dokumen dan penyusunan file pendukung laporan |
 | Dadan Julianto | 2400016070 | Dokumentasi audio dan ekstraksi poin-poin penting dari wawancara |
 | Franchisco Dabutar | 2400016081 | Analisis data temuan lapangan dan penyelarasan alur logika (traceability) |
-| Mohammed Rashed Mansoor | 2406016105 | Dokumentasi visual dan pengumpulan artefak untuk bukti validasi lapangan |
+| Mohammed Rashed Mansoor | 2406016105 | Dokumentasi visual sistem, penyusunan artefak proyek, dan validasi antarmuka lapangan |
 
 ---
 
