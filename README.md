@@ -108,3 +108,27 @@ Aplikasi dapat diakses melalui `http://localhost:3000`.
 Setelah *setup*, masuklah menggunakan akun TU yang telah dibuat secara manual. Untuk menjaga integritas sistem, semua akun pengguna berikutnya (Kepsek, Koordinator, Pengampu, Orang Tua) hanya dapat dibuat, diatur, dan dikontrol eksklusif melalui dasbor **Staff TU**.
 
 (Khusus Orang Tua login menggunakan Nomor HP, dengan *password default* format: `TAHFIZ_{nomorHP}`)
+
+
+## Dokumentasi
+
+### Tampilan Depan sekolah
+![halaman sekolah](docs/gambar%20dokumentasi/gambar%201.png)
+
+### halaqoh santri
+![halaqoh santri](docs/gambar%20dokumentasi/gambar%202.png)
+
+### diskusi dengan kepala sekolah
+![diskusi dengan kepala sekolah](docs/gambar%20dokumentasi/gambar%203.png)
+
+### Surat dari kampus
+![Surat pengantar](docs/gambar%20dokumentasi/gambar%204.png)
+
+### buku kontrol hafalan santri saat ini
+![buku control](docs/gambar%20dokumentasi/gambar%205.png)
+
+### buku kontrol hafalan santri saat ini bagian dalam
+![buku control](docs/gambar%20dokumentasi/gambar%206.png)
+
+### buku kontrol UKJ (ujian kenaikan juz santri)
+![Ukj](docs/gambar%20dokumentasi/gambar%208.png)
