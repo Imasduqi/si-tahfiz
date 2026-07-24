@@ -113,22 +113,22 @@ Setelah *setup*, masuklah menggunakan akun TU yang telah dibuat secara manual. U
 ## Dokumentasi
 
 ### Tampilan Depan sekolah
-![halaman sekolah](docs/gambar%20dokumentasi/gambar%201.png)
+![halaman sekolah](Dokumentasi/gambar%20dokumentasi/gambar%201.png)
 
 ### halaqoh santri
-![halaqoh santri](docs/gambar%20dokumentasi/gambar%202.png)
+![halaqoh santri](Dokumentasi/gambar%20dokumentasi/gambar%202.png)
 
 ### diskusi dengan kepala sekolah
-![diskusi dengan kepala sekolah](docs/gambar%20dokumentasi/gambar%203.png)
+![diskusi dengan kepala sekolah](Dokumentasi/gambar%20dokumentasi/gambar%203.png)
 
 ### Surat dari kampus
-![Surat pengantar](docs/gambar%20dokumentasi/gambar%204.png)
+![Surat pengantar](Dokumentasi/gambar%20dokumentasi/gambar%204.png)
 
 ### buku kontrol hafalan santri saat ini
-![buku control](docs/gambar%20dokumentasi/gambar%205.png)
+![buku control](Dokumentasi/gambar%20dokumentasi/gambar%205.png)
 
 ### buku kontrol hafalan santri saat ini bagian dalam
-![buku control](docs/gambar%20dokumentasi/gambar%206.png)
+![buku control](Dokumentasi/gambar%20dokumentasi/gambar%206.png)
 
 ### buku kontrol UKJ (ujian kenaikan juz santri)
-![Ukj](docs/gambar%20dokumentasi/gambar%208.png)
+![Ukj](Dokumentasi/gambar%20dokumentasi/gambar%208.png)
